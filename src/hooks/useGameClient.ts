@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { GameState } from '../game/models.js';
+import { type GameState } from '../game/models.js';
 
 export function useGameClient() {
   const [state, setState] = useState<GameState | null>(null);

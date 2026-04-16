@@ -1,4 +1,4 @@
-import { GameState, Player, Card, CardColor, BotConfig, BotArchetype } from './models.js';
+import { type GameState, type Player, type Card, type BotConfig, type BotArchetype } from './models.js';
 
 export const BOT_ARCHETYPES: Record<BotArchetype, Omit<BotConfig, 'archetype'>> = {
   Novice: { skill: 0.1, awareness: 0.1, riskyness: 0.8 },
@@ -82,11 +82,20 @@ function playTrickCardForBot(bot: Player, state: GameState): Card {
     
     const trickContainsOurPain = state.currentTrick.some(tc => tc.card.color === painColor);
     const leadColor = state.leadColor;
+    const isOpenPain = state.openPainCards;
     
-    if (trickContainsOurPain) {
+    if (trickContainsOurPain && !isOpenPain) {
+        // In normal mode, avoid winning our pain cards
         const zeros = hand.filter(c => c.value === 0);
         if (zeros.length > 0) return zeros[0];
         return hand[0];
+    }
+    
+    if (trickContainsOurPain && isOpenPain) {
+        // In open pain mode, our pain suit is safe — treat like normal suit
+        const leadSuitCards = hand.filter(c => c.color === leadColor);
+        if (leadSuitCards.length > 0) return leadSuitCards[0];
+        return hand.filter(c => c.value === 0)[0] || hand[0];
     }
     
     if (config.riskyness > 0.5) {

@@ -1,9 +1,14 @@
 import { useGameClient } from './hooks/useGameClient';
 import { Lobby } from './components/Lobby';
 import { GameBoard } from './components/GameBoard';
+import { useEffect } from 'react';
 
 function App() {
   const { state, playerId, roomId, playerName, setRoomId, sendAction, changeName } = useGameClient();
+
+  useEffect(() => {
+    document.title = roomId ? `Stuck - ${roomId}` : 'Stuck';
+  }, [roomId]);
 
   const handleCreateRoom = () => {
     const newRoom = Math.random().toString(36).substring(2, 8).toUpperCase();

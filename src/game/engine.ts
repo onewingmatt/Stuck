@@ -1,4 +1,4 @@
-import { Card, CardColor, GameState, Player, PlayedCard } from './models.js';
+import { type Card, type CardColor, type GameState, type Player, type PlayedCard, type PlayerRoundBreakdown, type ScoreContribution } from './models.js';
 
 const COLORS: CardColor[] = ['Red', 'Yellow', 'Green', 'Blue', 'Purple', 'Gray'];
 
@@ -40,14 +40,19 @@ export function createInitialState(roomId: string): GameState {
     currentPlayerIndex: 0,
     trickWinnerIndex: null,
     scores: {},
-    deckSizes: 0
+    deckSizes: 0,
+    openPainCards: false,
+    roundBreakdown: {}
   };
 }
 
-export function startGame(state: GameState): GameState {
+export function startGame(state: GameState, options?: { openPainCards?: boolean }): GameState {
   if (state.players.length < 3 || state.players.length > 6) return state;
 
   const newState = { ...state, roundNumber: 1 };
+  if (options?.openPainCards) {
+    newState.openPainCards = true;
+  }
   newState.players.forEach((p: Player) => { newState.scores[p.id] = 0; });
   newState.dealerIndex = Math.floor(Math.random() * newState.players.length);
 
@@ -207,21 +212,72 @@ export function clearTrick(state: GameState): GameState {
 export function endRound(state: GameState): GameState {
     const newState = { ...state };
     newState.status = 'round_over';
+    const breakdown: Record<string, PlayerRoundBreakdown> = {};
     
     newState.players.forEach((player: Player) => {
-        let roundScore = 0;
+        const details: ScoreContribution[] = [];
+        let painPenalty = 0, wonPainPenalty = 0, wonGoodCards = 0;
         const painColor = player.chosenPainCard!.color;
         
-        roundScore -= player.chosenPainCard!.value;
+        // Pain card penalty
+        painPenalty = -player.chosenPainCard!.value;
+        details.push({
+            label: `Pain card (${painColor} ${player.chosenPainCard!.value})`,
+            value: painPenalty
+        });
         
+        // Score won cards
         for (const card of player.wonCards) {
-            if (card.color === painColor) roundScore -= card.value;
-            else roundScore += 1;
+            if (newState.openPainCards) {
+                wonGoodCards += 1;
+                details.push({
+                    label: `${card.color} ${card.value}`,
+                    value: 1,
+                    cardId: card.id
+                });
+            } else {
+                if (card.color === painColor) {
+                    wonPainPenalty -= card.value;
+                    details.push({
+                        label: `PAIN suit ${card.color} ${card.value}`,
+                        value: -card.value,
+                        cardId: card.id
+                    });
+                } else {
+                    wonGoodCards += 1;
+                    details.push({
+                        label: `${card.color} ${card.value}`,
+                        value: 1,
+                        cardId: card.id
+                    });
+                }
+            }
         }
         
+        // Summary line for won cards
+        if (wonGoodCards > 0) {
+            details.push({ label: `Won cards (${wonGoodCards} total)`, value: wonGoodCards });
+        }
+        if (wonPainPenalty < 0) {
+            details.push({ label: `Pain suit penalty`, value: wonPainPenalty });
+        }
+        
+        const roundScore = painPenalty + wonPainPenalty + wonGoodCards;
         player.score = roundScore;
         newState.scores[player.id] += roundScore;
+        
+        breakdown[player.id] = {
+            playerId: player.id,
+            painCardPenalty: painPenalty,
+            wonCardsTotal: wonGoodCards + wonPainPenalty,
+            wonPainPenalty,
+            wonGoodCards,
+            roundScore,
+            details
+        };
     });
+    
+    newState.roundBreakdown = breakdown;
     
     if (newState.roundNumber >= newState.players.length) {
         newState.status = 'game_over';

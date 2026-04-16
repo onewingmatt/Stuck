@@ -34,6 +34,22 @@ export interface PlayedCard {
   card: Card;
 }
 
+export interface ScoreContribution {
+  label: string;
+  value: number;
+  cardId?: string;
+}
+
+export interface PlayerRoundBreakdown {
+  playerId: string;
+  painCardPenalty: number;
+  wonCardsTotal: number;
+  wonPainPenalty: number;
+  wonGoodCards: number;
+  roundScore: number;
+  details: ScoreContribution[];
+}
+
 export interface GameState {
   roomId: string;
   status: GamePhase;
@@ -46,4 +62,6 @@ export interface GameState {
   trickWinnerIndex: number | null;
   scores: Record<string, number>;
   deckSizes: number;
+  openPainCards: boolean;
+  roundBreakdown: Record<string, PlayerRoundBreakdown>;
 }
