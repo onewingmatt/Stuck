@@ -35,8 +35,7 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
   const [justResolved, setJustResolved] = useState(false);
   const [selectedForPain, setSelectedForPain] = useState<string | null>(null);
   const [showWonPiles, setShowWonPiles] = useState<string | null>(null);
-  const [scoreFlashKeys, setScoreFlashKeys] = useState<Record<string, string>>({});
-  const scorePrevRef = useRef<Record<string, number>>({});
+  const [autoAdvanceTimer, setAutoAdvanceTimer] = useState<number | null>(null);
   const autoAdvanceRef = useRef<number | null>(null);
 
   if (!me) return <div className="flex items-center justify-center h-screen text-gray-400">Spectating...</div>;
