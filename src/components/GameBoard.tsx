@@ -138,20 +138,20 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
     for (let i = 1; i < state.players.length; i++) others.push(state.players[(myIndex + i) % state.players.length]);
 
     return (
-      <div className="flex justify-center flex-wrap gap-4 mb-6 px-2">
+      <div className="flex justify-center flex-wrap gap-4 mb-8 px-3">
         {others.map((p) => {
             const isThinking = state.currentPlayerIndex === state.players.findIndex(x => x.id === p.id) && state.status === 'playing_trick';
             return (
-                <div key={p.id} className={`flex flex-col items-center px-3 py-2 rounded-lg text-sm transition-all duration-300 ${
+                <div key={p.id} className={`flex flex-col items-center rounded-2xl border px-4 py-3 text-sm shadow-lg transition-all duration-300 ${
                     isThinking
-                        ? 'bg-yellow-500/20 ring-2 ring-yellow-400/50 scale-105'
-                        : 'bg-white/5'
+                        ? 'border-yellow-300/40 bg-yellow-500/20 ring-2 ring-yellow-400/40 scale-105'
+                        : 'border-white/10 bg-white/5 hover:bg-white/10'
                 }`}>
                     <div className="flex items-center gap-2">
                         <span className="font-semibold">{p.name}</span>
                         {state.status !== 'selecting_pain' && getPainDot(p.chosenPainCard?.color, 'w-2.5 h-2.5')}
                     </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+                        <div className="flex items-center gap-3 mt-1 text-xs text-slate-400/90">
                         <span>Score: <span className="text-white font-mono">{state.scores[p.id]}</span></span>
                         <span>Cards: <span className="text-white font-mono">{p.hand.length}</span></span>
                         {p.wonCards.length > 0 && (

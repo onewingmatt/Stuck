@@ -17,8 +17,8 @@ interface LobbyProps {
 function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="mb-4">
-      <h2 className="text-lg font-semibold text-white">{title}</h2>
-      {subtitle && <p className="mt-1 text-sm text-slate-400">{subtitle}</p>}
+      <div className="text-[11px] uppercase tracking-[0.28em] text-slate-500">{title}</div>
+      {subtitle && <p className="mt-1 text-sm leading-6 text-slate-300">{subtitle}</p>}
     </div>
   );
 }
@@ -36,7 +36,7 @@ export function Lobby({ state, playerId, roomId, playerName, changeName, sendAct
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.20),_transparent_40%),linear-gradient(180deg,#0f172a_0%,#111827_45%,#020617_100%)] text-white px-4 py-10">
         <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-5xl items-center">
           <div className="grid w-full gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="rounded-3xl border border-white/10 bg-white/8 p-8 shadow-2xl shadow-black/30 backdrop-blur-xl">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/30 backdrop-blur-xl">
               <div className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
                 Classic card chaos, cleaned up
               </div>
@@ -71,7 +71,7 @@ export function Lobby({ state, playerId, roomId, playerName, changeName, sendAct
                       onChange={e => setTempName(e.target.value)}
                     />
                     <button
-                      className="rounded-xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 transition-colors hover:bg-cyan-400"
+                      className="rounded-xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 shadow-lg shadow-cyan-500/20 transition-all hover:bg-cyan-400 hover:shadow-cyan-400/30 active:scale-[0.98]"
                       onClick={() => { soundManager.play('click'); changeName(tempName); setEditingName(false); }}
                     >
                       Save
@@ -84,7 +84,7 @@ export function Lobby({ state, playerId, roomId, playerName, changeName, sendAct
                       <div className="mt-1 text-lg font-semibold text-white">{playerName}</div>
                     </div>
                     <button
-                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-200 transition-colors hover:bg-white/10 hover:text-white"
+                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-200 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
                       onClick={() => { soundManager.play('click'); setEditingName(true); }}
                     >
                       Edit
@@ -131,7 +131,7 @@ export function Lobby({ state, playerId, roomId, playerName, changeName, sendAct
                 <SectionTitle title="Start a room" subtitle="Create a new match or join an existing one." />
                 <button
                   onClick={() => { soundManager.play('click'); createRoom(); }}
-                  className="w-full rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-white transition-colors hover:bg-emerald-400"
+                  className="w-full rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400 hover:shadow-emerald-400/25 active:scale-[0.98]"
                 >
                   Create New Game
                 </button>
@@ -150,7 +150,7 @@ export function Lobby({ state, playerId, roomId, playerName, changeName, sendAct
                   />
                   <button
                     onClick={() => { soundManager.play('click'); joinRoom(joinId); }}
-                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-semibold text-slate-200 transition-colors hover:bg-white/10 hover:text-white"
+                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-semibold text-slate-200 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
                   >
                     Join
                   </button>

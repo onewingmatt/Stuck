@@ -10,8 +10,14 @@ interface CardViewProps {
 }
 
 const colorMap: Record<CardColor, string> = {
-  Red: 'bg-red-600', Yellow: 'bg-yellow-500', Green: 'bg-emerald-600', Blue: 'bg-blue-600', Purple: 'bg-purple-600', Gray: 'bg-slate-500',
-  Pink: 'bg-pink-500', Orange: 'bg-orange-500',
+  Red: 'from-rose-500 to-red-600',
+  Yellow: 'from-amber-300 to-yellow-500',
+  Green: 'from-emerald-400 to-emerald-600',
+  Blue: 'from-sky-400 to-blue-600',
+  Purple: 'from-violet-400 to-purple-700',
+  Gray: 'from-slate-300 to-slate-600',
+  Pink: 'from-fuchsia-400 to-pink-600',
+  Orange: 'from-amber-400 to-orange-600',
 };
 
 const suitSymbol: Record<CardColor, string> = {
@@ -27,16 +33,18 @@ export function CardView({ card, onClick, selected, disabled, small, glow }: Car
     <div 
       onClick={disabled ? undefined : onClick}
       className={`
-        relative rounded-lg flex items-center justify-center font-bold text-white transition-all duration-200 overflow-visible
-        ${small ? 'w-12 h-16 text-lg' : 'w-16 h-24 sm:w-20 sm:h-32 text-2xl sm:text-3xl'}
-        ${bgClass} ${selected ? 'border-2 border-black -translate-y-4 shadow-xl' : glow ? `border border-white/30 ${glow}` : 'border border-white/30 shadow-lg'}
-        ${disabled ? 'opacity-40 cursor-not-allowed saturate-50' : small ? '' : `cursor-pointer card-hover-lift`}
+        relative isolate flex items-center justify-center overflow-visible rounded-2xl font-bold text-white transition-all duration-200 ease-out
+        ${small ? 'h-16 w-12 text-lg' : 'h-24 w-16 text-2xl sm:h-32 sm:w-20 sm:text-3xl'}
+        bg-gradient-to-br ${bgClass}
+        ${selected ? 'z-20 -translate-y-5 scale-[1.04] ring-2 ring-cyan-300/70 shadow-[0_18px_40px_rgba(0,0,0,0.45)]' : glow ? `ring-1 ring-white/25 ${glow}` : 'ring-1 ring-white/20 shadow-[0_10px_24px_rgba(0,0,0,0.3)]'}
+        ${disabled ? 'opacity-40 cursor-not-allowed saturate-50' : small ? '' : 'cursor-pointer card-hover-lift'}
       `}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" />
-      <div className="absolute top-1 left-1 text-[10px] opacity-70 leading-none">{sym}</div>
-      <div className="relative z-10 drop-shadow">{card.value}</div>
-      <div className="absolute bottom-1 right-1 text-[10px] opacity-70 rotate-180 leading-none">{sym}</div>
+      <div className="absolute inset-0 rounded-2xl bg-[linear-gradient(135deg,rgba(255,255,255,0.28),rgba(255,255,255,0.02)_30%,rgba(0,0,0,0.12)_100%)]" />
+      <div className="absolute inset-x-0 top-0 h-7 rounded-t-2xl bg-white/10" />
+      <div className="absolute left-1.5 top-1.5 text-[10px] font-black uppercase tracking-wider opacity-80 leading-none">{sym}</div>
+      <div className="relative z-10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">{card.value}</div>
+      <div className="absolute bottom-1.5 right-1.5 text-[10px] font-black uppercase tracking-wider opacity-80 rotate-180 leading-none">{sym}</div>
     </div>
   );
 }
