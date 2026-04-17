@@ -8,9 +8,16 @@ export function createDeck(playerCount: number): Card[] {
   let maxValue = 8;
 
   if (playerCount === 4) maxValue = 11;
-  else if (playerCount === 5) maxValue = 14;
-  else if (playerCount === 6) {
-    colorsToUse = COLORS.slice(0, 6);
+  else if (playerCount >= 5 && playerCount <= 6) {
+    maxValue = 14;
+    if (playerCount === 6) colorsToUse = COLORS.slice(0, 6);
+  }
+  else if (playerCount === 7) {
+    colorsToUse = COLORS.slice(0, 7);
+    maxValue = 14;
+  }
+  else if (playerCount === 8) {
+    colorsToUse = COLORS.slice(0, 8);
     maxValue = 14;
   }
 
@@ -47,7 +54,7 @@ export function createInitialState(roomId: string): GameState {
 }
 
 export function startGame(state: GameState, options?: { openPainCards?: boolean }): GameState {
-  if (state.players.length < 3 || state.players.length > 6) return state;
+  if (state.players.length < 3 || state.players.length > 8) return state;
 
   const newState = { ...state, roundNumber: 1 };
   if (options?.openPainCards) {
