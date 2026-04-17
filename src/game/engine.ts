@@ -1,6 +1,6 @@
 import { type Card, type CardColor, type GameState, type Player, type PlayedCard, type PlayerRoundBreakdown, type ScoreContribution } from './models.js';
 
-const COLORS: CardColor[] = ['Red', 'Yellow', 'Green', 'Blue', 'Purple', 'Gray'];
+const COLORS: CardColor[] = ['Red', 'Yellow', 'Green', 'Blue', 'Purple', 'Gray', 'Pink', 'Orange'];
 
 export function createDeck(playerCount: number): Card[] {
   const deck: Card[] = [];
