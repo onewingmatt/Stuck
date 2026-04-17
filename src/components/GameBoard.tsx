@@ -177,11 +177,12 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
     if (!player || player.wonCards.length === 0) return null;
     const painColor = player.chosenPainCard?.color;
     return (
-      <div className="fixed inset-x-0 bottom-24 z-40 mx-auto w-max max-w-2xl px-4">
-        <div className="bg-slate-900/95 backdrop-blur border border-white/10 rounded-xl p-4 shadow-2xl anim-fade-in-up">
+      <div className="fixed inset-x-0 bottom-24 z-40 mx-auto w-max max-w-2xl px-4 animate-[fadeInUp_0.25s_ease-out]">
+        
+        <div className="rounded-2xl border border-white/10 bg-slate-950/95 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl anim-fade-in-up">
           <div className="flex justify-between items-center mb-2">
             <span className="font-bold text-sm">{player.name}'s won cards ({player.wonCards.length})</span>
-            <button onClick={() => setShowWonPiles(null)} className="text-gray-400 hover:text-white text-sm">&times;</button>
+              <button onClick={() => setShowWonPiles(null)} className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-sm text-slate-400 transition-colors hover:bg-white/10 hover:text-white">&times;</button>
           </div>
           <div className="flex overflow-x-auto gap-1 custom-scrollbar">
             {player.wonCards.map((card) => {
@@ -205,7 +206,7 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
     const timeLeft = autoAdvanceTimer ? Math.max(0, 3 - Math.floor((Date.now() - autoAdvanceTimer) / 1000)) : null;
 
     return (
-      <div className="flex flex-col items-center justify-center my-4 min-h-[180px]">
+      <div className="flex min-h-[200px] flex-col items-center justify-center my-4">
         {state.leadColor && (
             <div className="mb-3 px-3 py-1 rounded-full bg-white/10 text-sm font-medium backdrop-blur-sm">
               Lead: {state.leadColor}
@@ -239,7 +240,7 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
             )}
             <button onClick={handleClearTrick} className={`${
               justResolved ? 'hidden' : ''
-            } bg-white/15 hover:bg-white/25 text-white px-6 py-2 rounded-lg font-medium transition-all backdrop-blur-sm border border-white/20`}>
+            } rounded-xl border border-white/15 bg-white/10 px-6 py-2 font-medium text-white shadow-lg shadow-black/20 backdrop-blur-sm transition-all hover:bg-white/20 hover:shadow-black/30 active:scale-[0.98]`}>
               Next Trick →
             </button>
           </div>
@@ -435,12 +436,12 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
       {/* Center area */}
       <div className="flex-grow flex items-center justify-center">
         {state.status === 'selecting_pain' ? (
-          <div className="flex flex-col items-center gap-4">
-            <div className="text-xl font-bold text-center bg-black/50 p-6 rounded-lg border border-white/10 backdrop-blur-sm anim-fade-in-up">
+          <div className="flex flex-col items-center gap-4 animate-[fadeInUp_0.28s_ease-out]">
+                <div className="rounded-2xl border border-white/10 bg-black/40 p-6 text-center text-xl font-bold backdrop-blur-xl shadow-2xl shadow-black/25 anim-fade-in-up">
               {me.chosenPainCard ? "Waiting for others..." : "Select your Pain Color!"}
             </div>
             {myPainColor && (
-              <div className="flex items-center gap-2 text-sm text-gray-400 anim-fade-in-up">
+            <div className="flex items-center gap-2 text-sm text-slate-400 animate-[fadeInUp_0.28s_ease-out]">
                 <span>Your pain:</span>
                 {getPainDot(myPainColor, 'w-4 h-4')}
                 <span className="font-medium text-white">{myPainColor}</span>
@@ -451,11 +452,11 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
       </div>
 
       {/* Bottom hand area */}
-      <div className="mt-auto pt-4 border-t border-white/10 bg-black/20 backdrop-blur-sm -mx-4 px-4 pb-4">
-        <div className="flex justify-between items-end mb-4">
+      <div className="mt-auto -mx-4 border-t border-white/10 bg-black/20 px-4 pb-4 pt-4 backdrop-blur-sm">
+        <div className="mb-4 flex items-end justify-between gap-4">
             <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold">{me.name} (You)</span>
+                  <span className="font-bold tracking-wide">{me.name} (You)</span>
                   {myPainColor && (
                     <div className="flex items-center gap-1 text-xs text-gray-400">
                       {getPainDot(myPainColor, 'w-2.5 h-2.5')}
@@ -463,7 +464,7 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
                     </div>
                   )}
                 </div>
-                <div className="text-sm text-gray-400">Score: {state.scores[me.id]}</div>
+                <div className="text-sm text-slate-400">Score: {state.scores[me.id]}</div>
             </div>
         </div>
         {renderHand()}
