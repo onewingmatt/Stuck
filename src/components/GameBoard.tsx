@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { type GameState, type CardColor } from '../game/models.js';
 import { CardView } from './CardView';
+import { soundManager } from '../game/soundManager';
 
 interface GameBoardProps {
   state: GameState;
@@ -65,6 +66,7 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
       setPrevTrickLen(trick.length);
 
       if (trick.length === state.players.length) {
+        soundManager.play('trick_resolve');
         setJustResolved(true);
         trick.forEach(tc => {
           setAnimCards(prev => ({ ...prev, [tc.playerId]: { anim: 'collect' } }));
@@ -83,6 +85,12 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
     };
   }, []);
 
+  useEffect(() => {
+    if (state.status === 'round_over' || state.status === 'game_over') {
+      soundManager.play('round_over');
+    }
+  }, [state.status]);
+
   // Clear auto-advance timer when trick changes
   useEffect(() => {
     if (state.currentTrick.length === 0 && autoAdvanceRef.current) {
@@ -92,6 +100,7 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
   }, [state.currentTrick.length]);
 
   const handleClearTrick = () => {
+    soundManager.play('click');
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
     setAutoAdvanceTimer(null);
     sendAction('clear_trick');
@@ -99,11 +108,15 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
 
   const handleCardClick = (cardId: string) => {
     if (state.status === 'selecting_pain') {
+      soundManager.play('card_play');
       setSelectedForPain(cardId);
       sendAction('select_pain', { cardId });
       setTimeout(() => setSelectedForPain(null), 400);
     }
-    else if (state.status === 'playing_trick' && isMyTurn) sendAction('play_card', { cardId });
+    else if (state.status === 'playing_trick' && isMyTurn) {
+      soundManager.play('card_play');
+      sendAction('play_card', { cardId });
+    }
   };
 
   const getPainDot = (painColor: CardColor | undefined | null, size = 'w-3 h-3') => {
