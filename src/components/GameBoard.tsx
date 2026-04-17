@@ -394,7 +394,7 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
     if (!me) return null;
 
     return (
-      <div className="flex overflow-x-auto space-x-[-1.5rem] sm:space-x-[-1rem] py-4 px-4 custom-scrollbar">
+      <div className="flex overflow-x-auto space-x-[-1.5rem] sm:space-x-[-1rem] px-4 py-8 pb-4 custom-scrollbar" >
         {me.hand.map((card) => {
           const isPainSuit = isPainCard(card.color);
           const matchesLead = leadHintCards.has(card.id);
@@ -403,7 +403,7 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
             <div key={card.id}
               className={`relative transition-all duration-200 ${
                 selectedForPain === card.id ? 'opacity-50 scale-90' :
-                'hover:z-10 hover:-translate-y-4'
+                'hover:z-10 hover:-translate-y-2'
               }`}
             >
               <CardView
@@ -416,9 +416,9 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
                 }
                 glow={isPainSuit ? CARD_DIM_CLASS[card.color] : undefined}
               />
-              {matchesLead && <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-white/60" />}
+              {matchesLead && <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-white/60" />}
               {isPainSuit && state.status === 'playing_trick' && (
-                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-red-500/80 shadow" />
+                <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-red-500/80 shadow" />
               )}
             </div>
           );
