@@ -40,8 +40,7 @@ export function CardView({ card, onClick, selected, disabled, small, glow }: Car
         ${disabled ? 'opacity-40 cursor-not-allowed saturate-50' : small ? '' : 'cursor-pointer card-hover-lift'}
       `}
     >
-      <div className="absolute inset-0 rounded-2xl bg-[linear-gradient(135deg,rgba(255,255,255,0.28),rgba(255,255,255,0.02)_30%,rgba(0,0,0,0.12)_100%)]" />
-      <div className="absolute inset-x-0 top-0 h-7 rounded-t-2xl bg-white/10" />
+      <div className="absolute inset-0 rounded-2xl bg-[linear-gradient(135deg,rgba(255,255,255,0.24),rgba(255,255,255,0.02)_30%,rgba(0,0,0,0.12)_100%)]" />
       <div className="absolute left-1.5 top-1.5 text-[10px] font-black uppercase tracking-wider opacity-80 leading-none">{sym}</div>
       <div className="relative z-10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">{card.value}</div>
       <div className="absolute bottom-1.5 right-1.5 text-[10px] font-black uppercase tracking-wider opacity-80 rotate-180 leading-none">{sym}</div>
