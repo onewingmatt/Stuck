@@ -43,7 +43,7 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
   const [autoAdvanceTimer, setAutoAdvanceTimer] = useState<number | null>(null);
   const autoAdvanceRef = useRef<number | null>(null);
 
-  if (!me) return <div className="flex items-center justify-center h-screen text-gray-400">Spectating...</div>;
+  if (!me) return <div className="flex items-center justify-center min-h-screen bg-slate-950 text-slate-400">Spectating...</div>;
 
   const isMyTurn = state.currentPlayerIndex === myIndex && state.status === 'playing_trick';
   const myPainColor = me!.chosenPainCard?.color ?? null;
@@ -138,7 +138,7 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
     for (let i = 1; i < state.players.length; i++) others.push(state.players[(myIndex + i) % state.players.length]);
 
     return (
-      <div className="flex justify-center space-x-3 mb-6 flex-wrap">
+      <div className="flex justify-center flex-wrap gap-4 mb-6 px-2">
         {others.map((p) => {
             const isThinking = state.currentPlayerIndex === state.players.findIndex(x => x.id === p.id) && state.status === 'playing_trick';
             return (
@@ -151,7 +151,7 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
                         <span className="font-semibold">{p.name}</span>
                         {state.status !== 'selecting_pain' && getPainDot(p.chosenPainCard?.color, 'w-2.5 h-2.5')}
                     </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
                         <span>Score: <span className="text-white font-mono">{state.scores[p.id]}</span></span>
                         <span>Cards: <span className="text-white font-mono">{p.hand.length}</span></span>
                         {p.wonCards.length > 0 && (
@@ -427,7 +427,7 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-green-900 text-white p-4 overflow-hidden relative">
+      <div className="flex flex-col h-screen bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.16),_transparent_30%),linear-gradient(180deg,#0f172a_0%,#1e293b_45%,#022c22_100%)] text-white p-4 overflow-hidden relative">
       <div className="text-center mb-4 font-mono text-sm tracking-wider text-green-300/70">
         Round {state.roundNumber} of {state.players.length}
       </div>

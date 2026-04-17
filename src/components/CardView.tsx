@@ -27,7 +27,7 @@ export function CardView({ card, onClick, selected, disabled, small, glow }: Car
     <div 
       onClick={disabled ? undefined : onClick}
       className={`
-        relative rounded-lg flex items-center justify-center font-bold text-white transition-all duration-200 overflow-hidden
+        relative rounded-lg flex items-center justify-center font-bold text-white transition-all duration-200 overflow-visible
         ${small ? 'w-12 h-16 text-lg' : 'w-16 h-24 sm:w-20 sm:h-32 text-2xl sm:text-3xl'}
         ${bgClass} ${selected ? 'border-2 border-black -translate-y-4 shadow-xl' : glow ? `border border-white/30 ${glow}` : 'border border-white/30 shadow-lg'}
         ${disabled ? 'opacity-40 cursor-not-allowed saturate-50' : small ? '' : `cursor-pointer card-hover-lift`}
