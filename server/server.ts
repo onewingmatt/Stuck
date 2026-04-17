@@ -81,7 +81,7 @@ wss.on('connection', (ws) => {
         if (existingPlayer) {
           existingPlayer.connected = true;
           existingPlayer.name = playerName || existingPlayer.name;
-        } else if (state.status === 'waiting' && state.players.length < 6) {
+        } else if (state.status === 'waiting' && state.players.length < 8) {
             state.players.push({
               id: playerId,
               name: playerName || `Player ${state.players.length + 1}`,
@@ -95,7 +95,7 @@ wss.on('connection', (ws) => {
 
       } else if (type === 'add_bot') {
         const state = rooms[roomId];
-        if (state && state.status === 'waiting' && state.players.length < 6) {
+        if (state && state.status === 'waiting' && state.players.length < 8) {
             const archetype = (payload?.archetype || 'Average') as BotArchetype;
             const botConfig = BOT_ARCHETYPES[archetype];
             state.players.push({

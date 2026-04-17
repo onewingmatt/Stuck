@@ -1,4 +1,4 @@
-export type CardColor = 'Red' | 'Yellow' | 'Green' | 'Blue' | 'Purple' | 'Gray';
+export type CardColor = 'Red' | 'Yellow' | 'Green' | 'Blue' | 'Purple' | 'Gray' | 'Pink' | 'Orange';
 
 export interface Card {
   id: string;

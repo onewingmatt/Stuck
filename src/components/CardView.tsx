@@ -11,10 +11,12 @@ interface CardViewProps {
 
 const colorMap: Record<CardColor, string> = {
   Red: 'bg-red-600', Yellow: 'bg-yellow-500', Green: 'bg-emerald-600', Blue: 'bg-blue-600', Purple: 'bg-purple-600', Gray: 'bg-slate-500',
+  Pink: 'bg-pink-500', Orange: 'bg-orange-500',
 };
 
 const suitSymbol: Record<CardColor, string> = {
   Red: '◆', Yellow: '◇', Green: '♣', Blue: '♠', Purple: '✦', Gray: '●',
+  Pink: '♥', Orange: '☀',
 };
 
 export function CardView({ card, onClick, selected, disabled, small, glow }: CardViewProps) {
