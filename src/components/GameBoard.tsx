@@ -132,7 +132,7 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
                 }`}>
                     <div className="flex items-center gap-2">
                         <span className="font-semibold">{p.name}</span>
-                        {getPainDot(p.chosenPainCard?.color, 'w-2.5 h-2.5')}
+                        {state.status !== 'selecting_pain' && getPainDot(p.chosenPainCard?.color, 'w-2.5 h-2.5')}
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
                         <span>Score: <span className="text-white font-mono">{state.scores[p.id]}</span></span>
@@ -232,103 +232,139 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
   };
 
   const renderEndRound = () => {
-      if (state.status !== 'round_over' && state.status !== 'game_over') return null;
-      const sorted = [...state.players].sort((a,b) => state.scores[b.id] - state.scores[a.id]);
+    if (state.status !== 'round_over' && state.status !== 'game_over') return null;
+    const sorted = [...state.players].sort((a, b) => state.scores[b.id] - state.scores[a.id]);
 
-      return (
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center z-50">
-              <div className="bg-slate-900 border border-white/10 p-6 rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-                  <h2 className="text-2xl font-bold mb-4 text-center">
-                      {state.status === 'game_over' ? '🏆 Game Over' : 'Round Complete'}
-                  </h2>
+    return (
+      <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/85 backdrop-blur-sm px-3 py-3 sm:p-4">
+        <div className="w-full max-w-2xl max-h-[92vh] overflow-hidden rounded-2xl border border-white/10 bg-slate-950 shadow-2xl">
+          <div className="border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5 bg-slate-900/80">
+            <h2 className="text-center text-xl sm:text-2xl font-bold text-white">
+              {state.status === 'game_over' ? '🏆 Game Over' : 'Round Complete'}
+            </h2>
+            <p className="mt-1 text-center text-xs sm:text-sm text-slate-400">
+              Tap a player to expand their round breakdown.
+            </p>
+          </div>
 
-      <div className="space-y-3 mb-6">
-          {sorted.map((p, idx) => {
-              const bd = state.roundBreakdown?.[p.id];
-              const expanded = expandedBreakdown === p.id;
+          <div className="max-h-[calc(92vh-140px)] overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
+            <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-5">
+              {sorted.map((p, idx) => {
+                const bd = state.roundBreakdown?.[p.id];
+                const expanded = expandedBreakdown === p.id;
+                const roundClass = bd
+                  ? bd.roundScore > 0
+                    ? 'text-emerald-300'
+                    : bd.roundScore < 0
+                      ? 'text-rose-300'
+                      : 'text-slate-300'
+                  : 'text-slate-300';
 
-              return (
-                  <div key={`${p.id}-round-${state.roundNumber}`} className={`rounded-lg overflow-hidden transition-all anim-fade-in-up ${
-                      idx === 0 ? 'bg-yellow-500/10 border border-yellow-500/30' : 'bg-white/5'
-                  }`} style={{ animationDelay: `${idx * 0.08}s` }}>
-                      <div
-                          className="flex justify-between items-center px-4 py-3 cursor-pointer select-none hover:bg-white/5"
-                          onClick={() => setExpandedBreakdown(bd ? (expanded ? null : p.id) : null)}
-                      >
-                          <div className="flex items-center gap-2">
-                              <span className="text-lg">{idx === 0 ? '👑' : `#${idx + 1}`}</span>
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-sm">{p.name}</span>
-                                {getPainDot(p.chosenPainCard?.color, 'w-2 h-2')}
-                              </div>
+                return (
+                  <div
+                    key={`${p.id}-round-${state.roundNumber}`}
+                    className={`overflow-hidden rounded-xl border transition-all duration-200 ${
+                      idx === 0
+                        ? 'border-amber-400/30 bg-amber-400/10'
+                        : 'border-white/10 bg-white/5'
+                    } ${expanded ? 'ring-1 ring-white/20' : ''}`}
+                  >
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left active:bg-white/5 sm:px-5"
+                      onClick={() => setExpandedBreakdown(bd ? (expanded ? null : p.id) : null)}
+                    >
+                      <div className="min-w-0 flex items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/20 text-sm font-semibold text-white">
+                          {idx === 0 ? '👑' : idx + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="truncate font-semibold text-sm sm:text-base text-white">{p.name}</span>
+                            {state.status !== 'selecting_pain' && getPainDot(p.chosenPainCard?.color, 'w-2 h-2')}
                           </div>
-                          <div className="flex items-center gap-4">
-                              {bd && (
-                                  <div className="text-right flex flex-col items-end gap-0.5">
-                                      <div className={`text-xs font-mono ${bd.roundScore > 0 ? 'text-green-400' : bd.roundScore < 0 ? 'text-red-400' : 'text-gray-400'}`}>
-                                          {bd.roundScore > 0 ? '+' : ''}{bd.roundScore}
-                                      </div>
-                                      <div className="text-[10px] text-gray-500 flex gap-2">
-                                        <span className="text-red-400">{bd.painCardPenalty > 0 ? '+' : ''}{bd.painCardPenalty}</span>
-                                        <span className="text-green-400">+{bd.wonGoodCards}</span>
-                                        {bd.wonPainPenalty !== 0 && <span className="text-red-400">{bd.wonPainPenalty}</span>}
-                                      </div>
-                                  </div>
-                              )}
-                              <div className={`text-xl font-mono font-bold min-w-[3rem] text-right ${
-                                  bd
-                                    ? (bd.roundScore > 0 ? 'anim-score-up' : bd.roundScore < 0 ? 'anim-score-down' : '')
-                                    : ''
-                              }`}>
-                                  {state.scores[p.id]}
-                              </div>
-                              {bd && (
-                                  <span className="text-xs text-gray-500">{expanded ? '▾' : '▸'}</span>
-                              )}
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] sm:text-xs text-slate-400">
+                            <span>Round</span>
+                            <span className={`font-mono font-semibold ${roundClass}`}>
+                              {bd?.roundScore != null && bd.roundScore > 0 ? '+' : ''}{bd?.roundScore ?? 0}
+                            </span>
+                            <span className="text-slate-500">•</span>
+                            <span className="text-slate-400">Total</span>
+                            <span className="font-mono font-semibold text-white">{state.scores[p.id]}</span>
                           </div>
+                        </div>
                       </div>
 
-                          {expanded && bd && (
-                                      <div className="px-4 pb-3 border-t border-white/5">
-                                          <table className="w-full text-xs mt-2">
-                                              <thead>
-                                                  <tr className="text-gray-500">
-                                                      <th className="text-left font-normal py-1">Card</th>
-                                                      <th className="text-right font-normal py-1">Pts</th>
-                                                  </tr>
-                                              </thead>
-                                              <tbody>
-                                                  {bd.details.map((d, i) => {
-                                                      const isBad = d.value < 0;
-                                                      return (
-                                                          <tr key={i} className={`anim-fade-in-up ${isBad ? 'text-red-400' : d.value > 0 ? 'text-green-400' : 'text-gray-400'}`} style={{ animationDelay: `${i * 0.04}s` }}>
-                                                              <td className="py-1 font-mono">{d.label}</td>
-                                                              <td className="text-right py-1 font-mono font-bold">{d.value > 0 ? '+' : ''}{d.value}</td>
-                                                          </tr>
-                                                      );
-                                                  })}
-                                              </tbody>
-                                          </table>
-                                          <div className="border-t border-white/10 mt-2 pt-2 flex justify-between text-sm font-bold">
-                                              <span>Round total</span>
-                                              <span className={bd.roundScore > 0 ? 'text-green-400' : bd.roundScore < 0 ? 'text-red-400' : 'text-gray-400'}>
-                                                  {bd.roundScore > 0 ? '+' : ''}{bd.roundScore}
-                                              </span>
-                                          </div>
-                                      </div>
-                          )}
+                      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                        {bd && (
+                          <div className="hidden text-right sm:block">
+                            <div className={`text-sm font-mono font-semibold ${roundClass}`}>
+                              {bd.roundScore > 0 ? '+' : ''}{bd.roundScore}
+                            </div>
+                            <div className="mt-0.5 flex gap-2 text-[11px] text-slate-400">
+                              <span className="text-rose-300">{bd.painCardPenalty > 0 ? '+' : ''}{bd.painCardPenalty}</span>
+                              <span className="text-emerald-300">+{bd.wonGoodCards}</span>
+                              {bd.wonPainPenalty !== 0 && <span className="text-rose-300">{bd.wonPainPenalty}</span>}
+                            </div>
+                          </div>
+                        )}
+                        {bd && <span className="text-sm text-slate-400">{expanded ? '▾' : '▸'}</span>}
                       </div>
-                  );
+                    </button>
+
+                    {expanded && bd && (
+                      <div className="border-t border-white/10 px-4 pb-4 pt-3 sm:px-5">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {bd.details.map((d, i) => {
+                            const isBad = d.value < 0;
+                            const isZero = d.value === 0;
+                            return (
+                              <div
+                                key={`${p.id}-${i}`}
+                                className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs sm:text-sm ${
+                                  isBad
+                                    ? 'border-rose-500/20 bg-rose-500/10 text-rose-200'
+                                    : isZero
+                                      ? 'border-slate-600/40 bg-slate-800/70 text-slate-300'
+                                      : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200'
+                                }`}
+                              >
+                                <span className="min-w-0 pr-3 font-mono leading-snug">{d.label}</span>
+                                <span className="shrink-0 font-mono font-semibold">
+                                  {d.value > 0 ? '+' : ''}{d.value}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-3 text-sm font-semibold text-white sm:px-4">
+                          <span>Round total</span>
+                          <span className={roundClass}>
+                            {bd.roundScore > 0 ? '+' : ''}{bd.roundScore}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
               })}
-          </div>
-          {state.status === 'round_over' && state.players[0].id === playerId && (
-                      <button onClick={() => sendAction('next_round')} className="w-full bg-green-600 hover:bg-green-500 text-white py-3 rounded-lg font-bold transition-colors">
-                          Next Round →
-                      </button>
-                  )}
+            </div>
+
+            {state.status === 'round_over' && state.players[0].id === playerId && (
+              <div className="px-0 pb-1 sm:pb-0">
+                <button
+                  onClick={() => sendAction('next_round')}
+                  className="w-full rounded-xl bg-emerald-600 py-3 text-base font-bold text-white shadow-lg shadow-emerald-950/30 transition-colors hover:bg-emerald-500 active:bg-emerald-700"
+                >
+                  Next Round →
+                </button>
               </div>
+            )}
           </div>
-      )
+        </div>
+      </div>
+    );
   };
 
   // Card rendering helpers for hand
