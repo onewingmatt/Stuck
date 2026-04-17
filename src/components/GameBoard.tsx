@@ -16,6 +16,8 @@ const PAIN_DOT_COLOR: Record<CardColor, string> = {
   Blue: 'bg-blue-500 shadow-blue-500/50',
   Purple: 'bg-purple-500 shadow-purple-500/50',
   Gray: 'bg-slate-400 shadow-slate-400/50',
+  Orange: 'bg-orange-500 shadow-orange-500/50',
+  Cyan: 'bg-cyan-500 shadow-cyan-500/50',
 };
 
 const CARD_DIM_CLASS: Record<CardColor, string> = {
@@ -25,6 +27,8 @@ const CARD_DIM_CLASS: Record<CardColor, string> = {
   Blue: 'shadow-[0_0_8px_rgba(59,130,246,0.6)]',
   Purple: 'shadow-[0_0_8px_rgba(168,85,247,0.6)]',
   Gray: 'shadow-[0_0_8px_rgba(148,163,184,0.6)]',
+  Orange: 'shadow-[0_0_8px_rgba(249,115,22,0.6)]',
+  Cyan: 'shadow-[0_0_8px_rgba(6,182,212,0.6)]',
 };
 
 export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
