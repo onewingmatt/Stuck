@@ -36,6 +36,7 @@ const CARD_DIM_CLASS: Record<CardColor, string> = {
 export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting = false }: GameBoardProps) {
   const me = state.players.find(p => p.id === playerId);
   const myIndex = state.players.findIndex(p => p.id === playerId);
+  const hostId = state.hostId ?? state.players[0]?.id ?? null;
   const [expandedBreakdown, setExpandedBreakdown] = useState<string | null>(null);
   const [animCards, setAnimCards] = useState<Record<string, { anim: string }>>({});
   const [prevTrickLen, setPrevTrickLen] = useState(0);
@@ -102,7 +103,8 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
 
   // Auto-advance next round for the host
   useEffect(() => {
-    if (state.status === 'round_over' && state.players[0]?.id === playerId) {
+    if (reconnecting) return;
+    if (state.status === 'round_over' && hostId === playerId) {
       let remaining = 10;
       setNextRoundCountdown(remaining);
       const tick = () => {
@@ -121,7 +123,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
       if (nextRoundRef.current) window.clearTimeout(nextRoundRef.current);
       setNextRoundCountdown(null);
     };
-  }, [state.status, playerId, sendAction]);
+  }, [state.status, hostId, playerId, sendAction, reconnecting]);
 
   // Clear auto-advance timer when trick changes
   useEffect(() => {
@@ -132,6 +134,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
   }, [state.currentTrick.length]);
 
   const handleClearTrick = () => {
+    if (reconnecting) return;
     soundManager.play('click');
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
     setAutoAdvanceTimer(null);
@@ -139,6 +142,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
   };
 
   const handleCardClick = (cardId: string) => {
+    if (reconnecting) return;
     if (state.status === 'selecting_pain') {
       soundManager.play('card_play');
       setSelectedForPain(cardId);
@@ -291,6 +295,35 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
             <p className="mt-1 text-center text-xs sm:text-sm text-slate-400">
               Tap a player to expand their round breakdown.
             </p>
+            {state.status === 'game_over' && (
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-left">
+                <div className="text-[11px] uppercase tracking-[0.28em] text-slate-500">Match recap</div>
+                <div className="mt-2 flex flex-wrap gap-3 text-sm text-slate-300">
+                  <span>Winner: <span className="font-semibold text-white">{sorted[0]?.name}</span></span>
+                  <span className="text-slate-500">•</span>
+                  <span>Tricks played: <span className="font-semibold text-white">{state.trickHistory.length}</span></span>
+                  <span className="text-slate-500">•</span>
+                  <span>Rounds: <span className="font-semibold text-white">{state.roundNumber}</span></span>
+                </div>
+              </div>
+            )}
+            {state.status === 'game_over' && (
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                <button
+                  onClick={() => { soundManager.play('click'); sendAction('play_again'); }}
+                  disabled={reconnecting || hostId !== playerId}
+                  className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-all active:scale-[0.98] ${reconnecting || hostId !== playerId ? 'cursor-not-allowed border-white/5 bg-white/5 text-slate-500' : 'border-emerald-400/20 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-400/20 hover:text-white'}`}
+                >
+                  Play Again
+                </button>
+                <button
+                  onClick={() => { soundManager.play('click'); leaveRoom(); }}
+                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
+                >
+                  Back to Main Menu
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="max-h-[calc(92vh-140px)] overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
@@ -397,7 +430,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
               })}
             </div>
 
-            {state.status === 'round_over' && state.players[0].id === playerId && (
+            {state.status === 'round_over' && hostId === playerId && (
               <div className="px-0 pb-1 sm:pb-0">
                 <button
                   onClick={() => {
@@ -444,6 +477,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
                 onClick={() => handleCardClick(card.id)}
                 selected={selectedForPain === card.id}
                 disabled={
+                  reconnecting ||
                   (state.status === 'selecting_pain' && me.chosenPainCard !== null) ||
                   (state.status === 'playing_trick' && (!isMyTurn || state.currentTrick.length === state.players.length))
                 }
