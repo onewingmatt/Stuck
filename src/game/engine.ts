@@ -1,4 +1,4 @@
-import { type Card, type CardColor, type GameState, type Player, type PlayedCard, type PlayerRoundBreakdown, type ScoreContribution } from './models.js';
+import { type Card, type CardColor, type GameState, type Player, type PlayedCard, type PlayerRoundBreakdown, type ScoreContribution, type TrickLog } from './models.js';
 
 const COLORS: CardColor[] = ['Red', 'Yellow', 'Green', 'Blue', 'Purple', 'Gray', 'Pink', 'Orange'];
 
@@ -49,7 +49,8 @@ export function createInitialState(roomId: string): GameState {
     scores: {},
     deckSizes: 0,
     openPainCards: false,
-    roundBreakdown: {}
+    roundBreakdown: {},
+    trickHistory: []
   };
 }
 
@@ -93,6 +94,7 @@ export function startRound(state: GameState): GameState {
   newState.currentTrick = [];
   newState.leadColor = null;
   newState.trickWinnerIndex = null;
+  newState.trickHistory = [];
 
   return newState;
 }
@@ -203,7 +205,10 @@ export function resolveTrick(state: GameState): GameState {
 
     const winnerIndexFinal = newState.players.findIndex((p: Player) => p.id === winnerId);
     newState.currentPlayerIndex = winnerIndexFinal;
-    
+
+    const trickNum = newState.trickHistory.length + 1;
+    newState.trickHistory = [...newState.trickHistory, { played: [...trick], winnerId, trickNumber: trickNum }];
+
     if (newState.players[0].hand.length === 0) {
         return endRound(newState);
     }

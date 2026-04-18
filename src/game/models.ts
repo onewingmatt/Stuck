@@ -34,6 +34,12 @@ export interface PlayedCard {
   card: Card;
 }
 
+export interface TrickLog {
+  played: PlayedCard[];
+  winnerId: string;
+  trickNumber: number;
+}
+
 export interface ScoreContribution {
   label: string;
   value: number;
@@ -64,4 +70,5 @@ export interface GameState {
   deckSizes: number;
   openPainCards: boolean;
   roundBreakdown: Record<string, PlayerRoundBreakdown>;
+  trickHistory: TrickLog[];
 }

@@ -4,7 +4,7 @@ import { GameBoard } from './components/GameBoard';
 import { useEffect } from 'react';
 
 function App() {
-  const { state, playerId, roomId, playerName, setRoomId, sendAction, changeName, leaveRoom } = useGameClient();
+  const { state, playerId, roomId, playerName, setRoomId, sendAction, changeName, leaveRoom, reconnecting } = useGameClient();
 
   useEffect(() => {
     document.title = roomId ? `Stuck - ${roomId}` : 'Stuck';
@@ -38,7 +38,7 @@ function App() {
     );
   }
 
-  return <GameBoard state={state} playerId={playerId} sendAction={sendAction} leaveRoom={leaveRoom} />;
+  return <GameBoard state={state} playerId={playerId} sendAction={sendAction} leaveRoom={leaveRoom} reconnecting={reconnecting} />;
 }
 
 export default App;

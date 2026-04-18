@@ -77,14 +77,15 @@ wss.on('connection', (ws) => {
         clientInfo.roomId = roomId;
         clientInfo.playerId = playerId;
 
+        const joinedName = payload?.playerName || playerName;
         const existingPlayer = state.players.find(p => p.id === playerId);
         if (existingPlayer) {
           existingPlayer.connected = true;
-          existingPlayer.name = playerName || existingPlayer.name;
+          existingPlayer.name = joinedName || existingPlayer.name;
         } else if (state.status === 'waiting' && state.players.length < 8) {
             state.players.push({
               id: playerId,
-              name: playerName || `Player ${state.players.length + 1}`,
+              name: joinedName || `Player ${state.players.length + 1}`,
               hand: [], wonCards: [], chosenPainCard: null, score: 0, isBot: false, connected: true
             });
         }

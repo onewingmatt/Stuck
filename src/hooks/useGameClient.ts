@@ -8,7 +8,11 @@ export function useGameClient() {
   const [roomId, setRoomId] = useState<string>('');
   const [playerName, setPlayerName] = useState<string>('');
   const [connected, setConnected] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const manualCloseRef = useRef(false);
 
   useEffect(() => {
     let pid = localStorage.getItem('stickem_player_id');
@@ -34,8 +38,13 @@ export function useGameClient() {
     }
   }, []);
 
-  useEffect(() => {
+  const connect = useCallback(() => {
     if (!roomId || !playerId) return;
+
+    if (reconnectTimerRef.current) {
+      window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = process.env.NODE_ENV === 'development' ? 'localhost:3000' : window.location.host;
@@ -45,7 +54,9 @@ export function useGameClient() {
     wsRef.current = ws;
 
     ws.onopen = () => {
+      reconnectAttemptsRef.current = 0;
       setConnected(true);
+      setReconnecting(false);
       ws.send(JSON.stringify({ type: 'join_room', roomId, playerId, playerName }));
     };
 
@@ -54,9 +65,41 @@ export function useGameClient() {
       if (data.type === 'state_update') setState(data.state);
     };
 
-    ws.onclose = () => setConnected(false);
-    return () => ws.close();
-  }, [roomId, playerId, playerName]);
+    ws.onerror = () => {
+      setConnected(false);
+    };
+
+    ws.onclose = () => {
+      setConnected(false);
+      if (manualCloseRef.current || !roomId || !playerId) {
+        setReconnecting(false);
+        return;
+      }
+      setReconnecting(true);
+      const attempt = reconnectAttemptsRef.current++;
+      const delay = Math.min(8000, 400 * (2 ** attempt));
+      reconnectTimerRef.current = window.setTimeout(() => {
+        if (!manualCloseRef.current && roomId && playerId) {
+          connect();
+        }
+      }, delay);
+    };
+
+    return ws;
+  }, [playerId, playerName, roomId]);
+
+  useEffect(() => {
+    manualCloseRef.current = false;
+    const ws = connect();
+    return () => {
+      manualCloseRef.current = true;
+      if (reconnectTimerRef.current) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      ws?.close();
+    };
+  }, [connect]);
 
   const sendAction = useCallback((type: string, payload?: any) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -69,18 +112,25 @@ export function useGameClient() {
     if (!cleaned) return;
     setPlayerName(cleaned);
     localStorage.setItem('stickem_player_name', cleaned);
-    sendAction('join_room');
+    sendAction('join_room', { playerName: cleaned });
   };
 
   const leaveRoom = useCallback(() => {
+    manualCloseRef.current = true;
+    if (reconnectTimerRef.current) {
+      window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
     if (wsRef.current) wsRef.current.close();
     setState(null);
     setRoomId('');
+    setConnected(false);
+    setReconnecting(false);
     const url = new URL(window.location.href);
     url.searchParams.delete('mode');
     url.searchParams.delete('room');
     window.history.pushState({}, '', url);
   }, []);
 
-  return { state, playerId, playerName, roomId, setRoomId, connected, sendAction, changeName, leaveRoom };
+  return { state, playerId, playerName, roomId, setRoomId, connected, reconnecting, sendAction, changeName, leaveRoom };
 }

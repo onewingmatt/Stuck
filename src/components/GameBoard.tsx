@@ -8,6 +8,7 @@ interface GameBoardProps {
   playerId: string;
   sendAction: (type: string, payload?: any) => void;
   leaveRoom: () => void;
+  reconnecting?: boolean;
 }
 
 const PAIN_DOT_COLOR: Record<CardColor, string> = {
@@ -32,7 +33,7 @@ const CARD_DIM_CLASS: Record<CardColor, string> = {
   Pink: 'shadow-[0_0_8px_rgba(236,72,153,0.6)]',
 };
 
-export function GameBoard({ state, playerId, sendAction, leaveRoom }: GameBoardProps) {
+export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting = false }: GameBoardProps) {
   const me = state.players.find(p => p.id === playerId);
   const myIndex = state.players.findIndex(p => p.id === playerId);
   const [expandedBreakdown, setExpandedBreakdown] = useState<string | null>(null);
@@ -41,6 +42,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom }: GameBoardP
   const [justResolved, setJustResolved] = useState(false);
   const [selectedForPain, setSelectedForPain] = useState<string | null>(null);
   const [showWonPiles, setShowWonPiles] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
   const [autoAdvanceTimer, setAutoAdvanceTimer] = useState<number | null>(null);
   const autoAdvanceRef = useRef<number | null>(null);
   const [nextRoundCountdown, setNextRoundCountdown] = useState<number | null>(null);
@@ -119,7 +121,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom }: GameBoardP
       if (nextRoundRef.current) window.clearTimeout(nextRoundRef.current);
       setNextRoundCountdown(null);
     };
-  }, [state.status, playerId]);
+  }, [state.status, playerId, sendAction]);
 
   // Clear auto-advance timer when trick changes
   useEffect(() => {
@@ -468,10 +470,23 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom }: GameBoardP
         >
           ← Leave
         </button>
-        <div className="text-center font-mono text-sm tracking-wider text-green-300/70">
-          Round {state.roundNumber} of {state.players.length}
+        <div className="flex flex-col items-center gap-1 text-center">
+          <div className="font-mono text-sm tracking-wider text-green-300/70">
+            Round {state.roundNumber} of {state.players.length}
+          </div>
+          {reconnecting && (
+            <div className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-200">
+              Rejoining…
+            </div>
+          )}
         </div>
-        <div className="w-20" />
+        <button
+          onClick={() => { soundManager.play('click'); setShowHistory(v => !v); }}
+          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
+          title="Show trick history"
+        >
+          History
+        </button>
       </div>
 
       {/* Center area */}
@@ -514,6 +529,50 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom }: GameBoardP
       {/* Other players on the right side */}
       {renderOtherPlayers()}
       {renderWonPilePopup()}
+      {showHistory && (
+        <div className="fixed right-4 top-20 z-40 w-[min(420px,calc(100vw-2rem))] rounded-2xl border border-white/10 bg-slate-950/95 p-4 shadow-2xl shadow-black/40 backdrop-blur-xl">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.28em] text-slate-500">Trick history</div>
+              <div className="text-sm text-slate-300">{state.trickHistory.length} tricks this round</div>
+            </div>
+            <button
+              onClick={() => setShowHistory(false)}
+              className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-300 transition-all hover:bg-white/10 hover:text-white"
+            >
+              Close
+            </button>
+          </div>
+          <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+            {state.trickHistory.length === 0 ? (
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-4 text-sm text-slate-400">
+                No tricks yet.
+              </div>
+            ) : state.trickHistory.slice().reverse().map((trick) => {
+              const winnerName = state.players.find(p => p.id === trick.winnerId)?.name ?? 'Unknown';
+              return (
+                <div key={trick.trickNumber} className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
+                  <div className="flex items-center justify-between gap-3 text-xs text-slate-400">
+                    <span>Trick {trick.trickNumber}</span>
+                    <span className="truncate text-right text-emerald-300">Winner: {winnerName}</span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-300">
+                    {trick.played.map((play) => {
+                      const pName = state.players.find(p => p.id === play.playerId)?.name ?? 'Player';
+                      return (
+                        <div key={`${trick.trickNumber}-${play.playerId}-${play.card.id}`} className="rounded-lg border border-white/10 bg-black/20 px-2 py-1">
+                          <span className="font-medium text-white">{pName}</span>
+                          <span className="ml-2 text-slate-400">{play.card.color} {play.card.value}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {renderEndRound()}
     </div>
   );
