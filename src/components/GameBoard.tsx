@@ -284,10 +284,10 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom }: GameBoardP
         <div className="w-full max-w-2xl max-h-[92vh] overflow-hidden rounded-2xl border border-white/10 bg-slate-950 shadow-2xl">
           <div className="border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5 bg-slate-900/80">
             <h2 className="text-center text-xl sm:text-2xl font-bold text-white">
-              {state.status === 'game_over' ? '🏆 Game Over' : 'Round Complete'}
+              {state.status === 'game_over' ? 'Game Over' : 'Round Complete'}
             </h2>
             <p className="mt-1 text-center text-xs sm:text-sm text-slate-400">
-              Tap a player to expand their round breakdown.
+              {state.status === 'game_over' ? 'Final standings.' : 'Tap a player to expand their round breakdown.'}
             </p>
           </div>
 
@@ -407,6 +407,24 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom }: GameBoardP
                   className={`w-full rounded-xl py-3 text-base font-bold text-white shadow-lg shadow-emerald-950/30 transition-all active:scale-[0.98] ${nextRoundCountdown !== null && nextRoundCountdown <= 3 ? 'bg-emerald-500 animate-pulse' : 'bg-emerald-600 hover:bg-emerald-500'}`}
                 >
                   Next Round {nextRoundCountdown !== null ? `(${nextRoundCountdown}s)` : '→'}
+                </button>
+              </div>
+            )}
+            {state.status === 'game_over' && (
+              <div className="px-0 pb-1 sm:pb-0 flex gap-3">
+                {state.players[0].id === playerId && (
+                  <button
+                    onClick={() => { soundManager.play('click'); sendAction('play_again'); }}
+                    className="flex-1 rounded-xl bg-cyan-500 py-3 text-base font-bold text-slate-950 shadow-lg shadow-cyan-500/20 transition-all hover:bg-cyan-400 active:scale-[0.98]"
+                  >
+                    Play Again
+                  </button>
+                )}
+                <button
+                  onClick={() => { soundManager.play('click'); leaveRoom(); }}
+                  className="flex-1 rounded-xl border border-white/10 bg-white/5 py-3 text-base font-bold text-slate-200 transition-all hover:bg-white/10 active:scale-[0.98]"
+                >
+                  Leave
                 </button>
               </div>
             )}

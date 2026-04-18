@@ -302,3 +302,30 @@ export function nextRound(state: GameState): GameState {
     
     return startRound(newState);
 }
+
+export function restartGame(state: GameState): GameState {
+    if (state.status !== 'game_over') return state;
+
+    return {
+        ...state,
+        status: 'waiting',
+        roundNumber: 0,
+        dealerIndex: 0,
+        currentPlayerIndex: 0,
+        trickWinnerIndex: null,
+        currentTrick: [],
+        leadColor: null,
+        scores: {},
+        roundBreakdown: {},
+        openPainCards: false,
+        deckSizes: 0,
+        players: state.players.map((p: Player) => ({
+            ...p,
+            hand: [],
+            wonCards: [],
+            chosenPainCard: null,
+            score: 0,
+            connected: true
+        }))
+    };
+}

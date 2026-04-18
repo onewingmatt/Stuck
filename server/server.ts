@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import { v4 as uuidv4 } from 'uuid';
 import { GameState, BotArchetype } from '../src/game/models.js';
-import { createInitialState, startGame, selectPainCard, playCard, clearTrick, nextRound } from '../src/game/engine.js';
+import { createInitialState, startGame, selectPainCard, playCard, clearTrick, nextRound, restartGame } from '../src/game/engine.js';
 import { doBotAction, BOT_ARCHETYPES } from '../src/game/ai.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -128,6 +128,12 @@ wss.on('connection', (ws) => {
         rooms[roomId] = nextRound(rooms[roomId]);
         broadcast(roomId);
         processBotActions(roomId);
+      } else if (type === 'play_again') {
+        const state = rooms[roomId];
+        if (state && state.status === 'game_over') {
+          rooms[roomId] = restartGame(state);
+          broadcast(roomId);
+        }
       }
     } catch (e) {
       console.error("Error processing message", e);
