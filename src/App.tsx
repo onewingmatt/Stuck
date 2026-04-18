@@ -31,7 +31,7 @@ function App() {
   if (!state || state.status === 'waiting') {
     return (
       <Lobby 
-        state={state!} playerId={playerId} roomId={roomId} playerName={playerName}
+        state={state!} playerId={playerId} roomId={roomId} playerName={playerName} reconnecting={reconnecting}
         changeName={changeName} sendAction={sendAction} createRoom={handleCreateRoom} joinRoom={handleJoinRoom}
         leaveRoom={leaveRoom}
       />

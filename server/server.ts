@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import { v4 as uuidv4 } from 'uuid';
 import { GameState, BotArchetype } from '../src/game/models.js';
-import { createInitialState, startGame, selectPainCard, playCard, clearTrick, nextRound } from '../src/game/engine.js';
+import { createInitialState, startGame, selectPainCard, playCard, clearTrick, nextRound, restartGame } from '../src/game/engine.js';
 import { doBotAction, BOT_ARCHETYPES } from '../src/game/ai.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -25,6 +25,31 @@ app.use((req, res) => {
 
 const rooms: Record<string, GameState> = {};
 const clients = new Map<WebSocket, { roomId: string; playerId: string | null }>();
+
+function getHostId(state: GameState) {
+  return state.hostId ?? state.players[0]?.id ?? null;
+}
+
+function setHostId(state: GameState, hostId: string | null) {
+  state.hostId = hostId;
+}
+
+function migrateHost(state: GameState) {
+  const currentHostId = getHostId(state);
+  const currentHost = currentHostId ? state.players.find(p => p.id === currentHostId) : null;
+
+  if (currentHost?.connected) return false;
+
+  const nextHost = state.players.find(p => p.connected && !p.isBot) ?? state.players[0] ?? null;
+  const nextHostId = nextHost?.id ?? null;
+
+  if (state.hostId !== nextHostId) {
+    setHostId(state, nextHostId);
+    return true;
+  }
+
+  return false;
+}
 
 function broadcast(roomId: string) {
   const state = rooms[roomId];
@@ -89,6 +114,12 @@ wss.on('connection', (ws) => {
               hand: [], wonCards: [], chosenPainCard: null, score: 0, isBot: false, connected: true
             });
         }
+        if (!state.hostId) {
+          const hostCandidate = state.players.find(p => p.connected && !p.isBot) ?? state.players[0] ?? null;
+          if (hostCandidate) setHostId(state, hostCandidate.id);
+        } else {
+          migrateHost(state);
+        }
         rooms[roomId] = state;
         ws.send(JSON.stringify({ type: 'state_update', state }));
         broadcast(roomId);
@@ -129,6 +160,14 @@ wss.on('connection', (ws) => {
         rooms[roomId] = nextRound(rooms[roomId]);
         broadcast(roomId);
         processBotActions(roomId);
+      } else if (type === 'play_again' && rooms[roomId]) {
+        const state = rooms[roomId];
+        const hostId = state.hostId ?? state.players[0]?.id;
+        if (state.status === 'game_over' && hostId === playerId) {
+          rooms[roomId] = restartGame(state);
+          broadcast(roomId);
+          processBotActions(roomId);
+        }
       }
     } catch (e) {
       console.error("Error processing message", e);
@@ -143,6 +182,7 @@ wss.on('connection', (ws) => {
         const player = state.players.find(p => p.id === info.playerId);
         if (player) {
           player.connected = false;
+          migrateHost(state);
           broadcast(info.roomId);
         }
       }

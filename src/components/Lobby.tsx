@@ -8,6 +8,7 @@ interface LobbyProps {
   playerId: string;
   roomId: string;
   playerName: string;
+  reconnecting?: boolean;
   changeName: (name: string) => void;
   sendAction: (type: string, payload?: any) => void;
   createRoom: () => void;
@@ -24,13 +25,14 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle?: string })
   );
 }
 
-export function Lobby({ state, playerId, roomId, playerName, changeName, sendAction, createRoom, joinRoom, leaveRoom }: LobbyProps) {
+export function Lobby({ state, playerId, roomId, playerName, reconnecting = false, changeName, sendAction, createRoom, joinRoom, leaveRoom }: LobbyProps) {
   const [joinId, setJoinId] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState(playerName);
   const [openPainCards, setOpenPainCards] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
   const [volume, setVolume] = useState(soundManager.getVolume());
+  const hostId = state.hostId ?? state.players[0]?.id ?? null;
 
   if (!roomId || !state) {
     return (
@@ -85,7 +87,8 @@ export function Lobby({ state, playerId, roomId, playerName, changeName, sendAct
                       <div className="mt-1 text-lg font-semibold text-white">{playerName}</div>
                     </div>
                     <button
-                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-200 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
+                      disabled={reconnecting}
+                    className={`rounded-xl border px-3 py-2 text-sm font-medium transition-all active:scale-[0.98] ${reconnecting ? 'cursor-not-allowed border-white/5 bg-white/5 text-slate-500' : 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white'}`}
                       onClick={() => { soundManager.play('click'); setEditingName(true); }}
                     >
                       Edit
@@ -132,8 +135,9 @@ export function Lobby({ state, playerId, roomId, playerName, changeName, sendAct
                 <SectionTitle title="Start a room" subtitle="Create a new match or join an existing one." />
                 <button
                   onClick={() => { soundManager.play('click'); createRoom(); }}
-                  className="w-full rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400 hover:shadow-emerald-400/25 active:scale-[0.98]"
-                >
+                      disabled={reconnecting}
+                      className={`w-full rounded-xl px-4 py-3 font-semibold text-white shadow-lg transition-all active:scale-[0.98] ${reconnecting ? 'cursor-not-allowed bg-slate-700 text-slate-300 shadow-none' : 'bg-emerald-500 shadow-emerald-500/20 hover:bg-emerald-400 hover:shadow-emerald-400/25'}`}
+>
                   Create New Game
                 </button>
                 <div className="my-4 flex items-center gap-3 text-xs uppercase tracking-[0.25em] text-slate-500">
@@ -151,7 +155,8 @@ export function Lobby({ state, playerId, roomId, playerName, changeName, sendAct
                   />
                   <button
                     onClick={() => { soundManager.play('click'); joinRoom(joinId); }}
-                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-semibold text-slate-200 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
+                    disabled={reconnecting}
+                    className={`rounded-xl border px-4 py-3 font-semibold transition-all active:scale-[0.98] ${reconnecting ? 'cursor-not-allowed border-white/5 bg-white/5 text-slate-500' : 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white'}`}
                   >
                     Join
                   </button>
@@ -164,7 +169,7 @@ export function Lobby({ state, playerId, roomId, playerName, changeName, sendAct
     );
   }
 
-  const isHost = state.players.length > 0 && state.players[0].id === playerId;
+  const isHost = hostId === playerId;
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.18),_transparent_35%),linear-gradient(180deg,#0f172a_0%,#1e293b_45%,#022c22_100%)] px-4 py-4 text-white">
@@ -229,7 +234,7 @@ export function Lobby({ state, playerId, roomId, playerName, changeName, sendAct
                         <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${p.connected ? 'bg-emerald-400/10 text-emerald-300' : 'bg-rose-400/10 text-rose-300'}`}>
                           {p.isBot ? `Bot — ${p.botConfig?.archetype}` : (p.connected ? 'Online' : 'Offline')}
                         </span>
-                        {state.players[0]?.id === p.id && <span className="text-[11px] uppercase tracking-[0.2em] text-amber-300/80">Host</span>}
+                        {hostId === p.id && <span className="text-[11px] uppercase tracking-[0.2em] text-amber-300/80">Host</span>}
                       </div>
                     </li>
                   );
@@ -268,7 +273,8 @@ export function Lobby({ state, playerId, roomId, playerName, changeName, sendAct
                         const select = document.getElementById('bot-type') as HTMLSelectElement;
                         sendAction('add_bot', { archetype: select.value });
                       }}
-                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/10 hover:text-white"
+                      disabled={reconnecting}
+                      className={`rounded-xl border px-4 py-3 text-sm font-semibold transition-colors ${reconnecting ? 'cursor-not-allowed border-white/5 bg-white/5 text-slate-500' : 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white'}`}
                     >
                       Add Bot
                     </button>
@@ -282,8 +288,8 @@ export function Lobby({ state, playerId, roomId, playerName, changeName, sendAct
               {isHost ? (
                 <button
                   onClick={() => { soundManager.play('click'); sendAction('start_game', { openPainCards }); }}
-                  disabled={state.players.length < 3}
-                  className={`w-full rounded-2xl px-4 py-4 text-base font-bold text-white transition-all ${state.players.length >= 3 ? 'bg-emerald-500 hover:bg-emerald-400 shadow-lg shadow-emerald-950/30' : 'cursor-not-allowed bg-slate-700 text-slate-300'}`}
+                  disabled={reconnecting || state.players.length < 3}
+                  className={`w-full rounded-2xl px-4 py-4 text-base font-bold text-white transition-all ${reconnecting ? 'cursor-not-allowed bg-slate-700 text-slate-300' : state.players.length >= 3 ? 'bg-emerald-500 hover:bg-emerald-400 shadow-lg shadow-emerald-950/30' : 'cursor-not-allowed bg-slate-700 text-slate-300'}`}
                 >
                   Start Game
                 </button>

@@ -38,6 +38,7 @@ export function createDeck(playerCount: number): Card[] {
 export function createInitialState(roomId: string): GameState {
   return {
     roomId,
+    hostId: null,
     status: 'waiting',
     players: [],
     currentTrick: [],
@@ -306,4 +307,19 @@ export function nextRound(state: GameState): GameState {
     newState.dealerIndex = (newState.dealerIndex + 1) % newState.players.length;
     
     return startRound(newState);
+}
+
+export function restartGame(state: GameState): GameState {
+    if (state.status !== 'game_over') return state;
+    return startGame({
+      ...state,
+      roundNumber: 0,
+      dealerIndex: state.dealerIndex,
+      currentPlayerIndex: state.currentPlayerIndex,
+      trickWinnerIndex: null,
+      currentTrick: [],
+      leadColor: null,
+      roundBreakdown: {},
+      trickHistory: []
+    }, { openPainCards: state.openPainCards });
 }

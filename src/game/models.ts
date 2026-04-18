@@ -58,6 +58,7 @@ export interface PlayerRoundBreakdown {
 
 export interface GameState {
   roomId: string;
+  hostId: string | null;
   status: GamePhase;
   players: Player[];
   currentTrick: PlayedCard[];
