@@ -65,10 +65,22 @@ export function useGameClient() {
   }, [roomId, playerId]);
 
   const changeName = (newName: string) => {
-    setPlayerName(newName);
-    localStorage.setItem('stickem_player_name', newName);
+    const cleaned = newName.trim().replace(/\s+/g, ' ').substring(0, 20);
+    if (!cleaned) return;
+    setPlayerName(cleaned);
+    localStorage.setItem('stickem_player_name', cleaned);
     sendAction('join_room');
   };
 
-  return { state, playerId, playerName, roomId, setRoomId, connected, sendAction, changeName };
+  const leaveRoom = useCallback(() => {
+    if (wsRef.current) wsRef.current.close();
+    setState(null);
+    setRoomId('');
+    const url = new URL(window.location.href);
+    url.searchParams.delete('mode');
+    url.searchParams.delete('room');
+    window.history.pushState({}, '', url);
+  }, []);
+
+  return { state, playerId, playerName, roomId, setRoomId, connected, sendAction, changeName, leaveRoom };
 }
