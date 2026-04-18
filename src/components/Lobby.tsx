@@ -12,6 +12,7 @@ interface LobbyProps {
   sendAction: (type: string, payload?: any) => void;
   createRoom: () => void;
   joinRoom: (id: string) => void;
+  leaveRoom: () => void;
 }
 
 function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
@@ -23,7 +24,7 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle?: string })
   );
 }
 
-export function Lobby({ state, playerId, roomId, playerName, changeName, sendAction, createRoom, joinRoom }: LobbyProps) {
+export function Lobby({ state, playerId, roomId, playerName, changeName, sendAction, createRoom, joinRoom, leaveRoom }: LobbyProps) {
   const [joinId, setJoinId] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState(playerName);
@@ -176,13 +177,22 @@ export function Lobby({ state, playerId, roomId, playerName, changeName, sendAct
               {isHost && <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-1 text-xs font-semibold text-emerald-300">Host</span>}
             </div>
           </div>
-          <button
-            onClick={() => { soundManager.play('click'); navigator.clipboard?.writeText(roomId); }}
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
-            title="Copy room code"
-          >
-            Copy code
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { soundManager.play('click'); navigator.clipboard?.writeText(roomId); }}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
+              title="Copy room code"
+            >
+              Copy code
+            </button>
+            <button
+              onClick={() => { soundManager.play('click'); leaveRoom(); }}
+              className="rounded-xl border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-xs font-medium text-rose-300 transition-all hover:bg-rose-400/20 hover:text-rose-200 active:scale-[0.98]"
+              title="Leave this room"
+            >
+              Leave
+            </button>
+          </div>
         </div>
 
         <div className="grid flex-1 gap-4 lg:grid-cols-[1.1fr_0.9fr]">

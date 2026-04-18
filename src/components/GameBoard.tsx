@@ -7,6 +7,7 @@ interface GameBoardProps {
   state: GameState;
   playerId: string;
   sendAction: (type: string, payload?: any) => void;
+  leaveRoom: () => void;
 }
 
 const PAIN_DOT_COLOR: Record<CardColor, string> = {
@@ -31,7 +32,7 @@ const CARD_DIM_CLASS: Record<CardColor, string> = {
   Pink: 'shadow-[0_0_8px_rgba(236,72,153,0.6)]',
 };
 
-export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
+export function GameBoard({ state, playerId, sendAction, leaveRoom }: GameBoardProps) {
   const me = state.players.find(p => p.id === playerId);
   const myIndex = state.players.findIndex(p => p.id === playerId);
   const [expandedBreakdown, setExpandedBreakdown] = useState<string | null>(null);
@@ -42,6 +43,8 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
   const [showWonPiles, setShowWonPiles] = useState<string | null>(null);
   const [autoAdvanceTimer, setAutoAdvanceTimer] = useState<number | null>(null);
   const autoAdvanceRef = useRef<number | null>(null);
+  const [nextRoundCountdown, setNextRoundCountdown] = useState<number | null>(null);
+  const nextRoundRef = useRef<number | null>(null);
 
   if (!me) return <div className="flex items-center justify-center min-h-screen bg-slate-950 text-slate-400">Spectating...</div>;
 
@@ -94,6 +97,29 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
       soundManager.play('round_over');
     }
   }, [state.status]);
+
+  // Auto-advance next round for the host
+  useEffect(() => {
+    if (state.status === 'round_over' && state.players[0]?.id === playerId) {
+      let remaining = 10;
+      setNextRoundCountdown(remaining);
+      const tick = () => {
+        remaining--;
+        setNextRoundCountdown(remaining);
+        if (remaining <= 0) {
+          sendAction('next_round');
+          setNextRoundCountdown(null);
+        } else {
+          nextRoundRef.current = window.setTimeout(tick, 1000);
+        }
+      };
+      nextRoundRef.current = window.setTimeout(tick, 1000);
+    }
+    return () => {
+      if (nextRoundRef.current) window.clearTimeout(nextRoundRef.current);
+      setNextRoundCountdown(null);
+    };
+  }, [state.status, playerId]);
 
   // Clear auto-advance timer when trick changes
   useEffect(() => {
@@ -149,18 +175,18 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
                 }`}>
                     <div className="flex items-center gap-2">
                         <span className="font-semibold">{p.name}</span>
-                        {state.status !== 'selecting_pain' && getPainDot(p.chosenPainCard?.color, 'w-2.5 h-2.5')}
+                        {state.status !== 'selecting_pain' && getPainDot(p.chosenPainCard?.color, 'w-3 h-3')}
                     </div>
                         <div className="flex items-center gap-3 mt-1 text-xs text-slate-400/90">
                         <span>Score: <span className="text-white font-mono">{state.scores[p.id]}</span></span>
                         <span>Cards: <span className="text-white font-mono">{p.hand.length}</span></span>
                         {p.wonCards.length > 0 && (
                             <button
-                              className="relative w-5 h-3 bg-white/10 rounded border border-white/20 hover:bg-white/20 transition-colors"
+                              className="relative flex items-center justify-center rounded-lg border border-white/15 bg-white/10 px-2 py-1 text-xs font-medium text-slate-300 transition-colors hover:bg-white/15 active:scale-[0.98]"
                               onClick={() => setShowWonPiles(showWonPiles === p.id ? null : p.id)}
                               title={`${p.wonCards.length} won cards`}
                             >
-                              <span className="absolute -top-1 -right-1 text-[8px] bg-white/20 rounded-full w-3 h-3 flex items-center justify-center">{p.wonCards.length}</span>
+                              {p.wonCards.length} cards
                             </button>
                         )}
                     </div>
@@ -372,10 +398,15 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
             {state.status === 'round_over' && state.players[0].id === playerId && (
               <div className="px-0 pb-1 sm:pb-0">
                 <button
-                  onClick={() => sendAction('next_round')}
-                  className="w-full rounded-xl bg-emerald-600 py-3 text-base font-bold text-white shadow-lg shadow-emerald-950/30 transition-colors hover:bg-emerald-500 active:bg-emerald-700"
+                  onClick={() => {
+                    soundManager.play('click');
+                    if (nextRoundRef.current) window.clearTimeout(nextRoundRef.current);
+                    setNextRoundCountdown(null);
+                    sendAction('next_round');
+                  }}
+                  className={`w-full rounded-xl py-3 text-base font-bold text-white shadow-lg shadow-emerald-950/30 transition-all active:scale-[0.98] ${nextRoundCountdown !== null && nextRoundCountdown <= 3 ? 'bg-emerald-500 animate-pulse' : 'bg-emerald-600 hover:bg-emerald-500'}`}
                 >
-                  Next Round →
+                  Next Round {nextRoundCountdown !== null ? `(${nextRoundCountdown}s)` : '→'}
                 </button>
               </div>
             )}
@@ -416,9 +447,9 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
                 }
                 glow={isPainSuit ? CARD_DIM_CLASS[card.color] : undefined}
               />
-              {matchesLead && <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-white/60" />}
+              {matchesLead && <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-white/60" />}
               {isPainSuit && state.status === 'playing_trick' && (
-                <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-red-500/80 shadow" />
+                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-red-500/80 shadow" />
               )}
             </div>
           );
@@ -429,8 +460,18 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
 
   return (
       <div className="flex flex-col h-screen bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.16),_transparent_30%),linear-gradient(180deg,#0f172a_0%,#1e293b_45%,#022c22_100%)] text-white p-4 overflow-hidden relative">
-      <div className="text-center mb-4 font-mono text-sm tracking-wider text-green-300/70">
-        Round {state.roundNumber} of {state.players.length}
+      <div className="mb-4 flex items-center justify-between">
+        <button
+          onClick={() => { soundManager.play('click'); leaveRoom(); }}
+          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
+          title="Leave this room"
+        >
+          ← Leave
+        </button>
+        <div className="text-center font-mono text-sm tracking-wider text-green-300/70">
+          Round {state.roundNumber} of {state.players.length}
+        </div>
+        <div className="w-20" />
       </div>
 
       {/* Center area */}
@@ -458,8 +499,8 @@ export function GameBoard({ state, playerId, sendAction }: GameBoardProps) {
                 <div className="flex items-center gap-2">
                   <span className="font-bold tracking-wide">{me.name} (You)</span>
                   {myPainColor && (
-                    <div className="flex items-center gap-1 text-xs text-gray-400">
-                      {getPainDot(myPainColor, 'w-2.5 h-2.5')}
+                        <div className="flex items-center gap-1 text-xs text-slate-400">
+                      {getPainDot(myPainColor, 'w-3 h-3')}
                       <span>Pain: {myPainColor}</span>
                     </div>
                   )}

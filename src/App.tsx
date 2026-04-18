@@ -4,7 +4,7 @@ import { GameBoard } from './components/GameBoard';
 import { useEffect } from 'react';
 
 function App() {
-  const { state, playerId, roomId, playerName, setRoomId, sendAction, changeName } = useGameClient();
+  const { state, playerId, roomId, playerName, setRoomId, sendAction, changeName, leaveRoom } = useGameClient();
 
   useEffect(() => {
     document.title = roomId ? `Stuck - ${roomId}` : 'Stuck';
@@ -33,11 +33,12 @@ function App() {
       <Lobby 
         state={state!} playerId={playerId} roomId={roomId} playerName={playerName}
         changeName={changeName} sendAction={sendAction} createRoom={handleCreateRoom} joinRoom={handleJoinRoom}
+        leaveRoom={leaveRoom}
       />
     );
   }
 
-  return <GameBoard state={state} playerId={playerId} sendAction={sendAction} />;
+  return <GameBoard state={state} playerId={playerId} sendAction={sendAction} leaveRoom={leaveRoom} />;
 }
 
 export default App;
