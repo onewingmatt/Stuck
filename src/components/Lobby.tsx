@@ -235,6 +235,15 @@ export function Lobby({ state, playerId, roomId, playerName, reconnecting = fals
                           {p.isBot ? `Bot — ${p.botConfig?.archetype}` : (p.connected ? 'Online' : 'Offline')}
                         </span>
                         {hostId === p.id && <span className="text-[11px] uppercase tracking-[0.2em] text-amber-300/80">Host</span>}
+                        {isHost && p.isBot && (
+                          <button
+                            onClick={() => { soundManager.play('click'); sendAction('remove_bot', { playerId: p.id }); }}
+                            disabled={reconnecting}
+                            className={`rounded-lg px-2 py-0.5 text-[11px] font-medium transition-all active:scale-[0.98] ${reconnecting ? 'cursor-not-allowed bg-white/5 text-slate-600' : 'bg-rose-500/15 text-rose-300 hover:bg-rose-500/25'}`}
+                          >
+                            Remove
+                          </button>
+                        )}
                       </div>
                     </li>
                   );

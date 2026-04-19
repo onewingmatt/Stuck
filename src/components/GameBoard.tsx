@@ -338,12 +338,13 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
                       ? 'text-rose-300'
                       : 'text-slate-300'
                   : 'text-slate-300';
+                const isTop = idx === 0;
 
                 return (
                   <div
                     key={`${p.id}-round-${state.roundNumber}`}
                     className={`overflow-hidden rounded-xl border transition-all duration-200 ${
-                      idx === 0
+                      isTop
                         ? 'border-amber-400/30 bg-amber-400/10'
                         : 'border-white/10 bg-white/5'
                     } ${expanded ? 'ring-1 ring-white/20' : ''}`}
@@ -354,40 +355,32 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
                       onClick={() => setExpandedBreakdown(bd ? (expanded ? null : p.id) : null)}
                     >
                       <div className="min-w-0 flex items-center gap-3">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/20 text-sm font-semibold text-white">
-                          {idx === 0 ? '👑' : idx + 1}
+                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${isTop ? 'bg-amber-400/20 text-amber-200' : 'bg-black/20 text-white'}`}>
+                          {isTop ? '1' : idx + 1}
                         </span>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 truncate">
-                            <span className="truncate font-semibold text-sm sm:text-base text-white">{p.name}</span>
+                            <span className={`truncate text-sm sm:text-base ${isTop ? 'font-bold text-white' : 'font-semibold text-white'}`}>{p.name}</span>
                             {state.status !== 'selecting_pain' && getPainDot(p.chosenPainCard?.color, 'w-2 h-2')}
-                          </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] sm:text-xs text-slate-400">
-                            <span>Round</span>
-                            <span className={`font-mono font-semibold ${roundClass}`}>
-                              {bd?.roundScore != null && bd.roundScore > 0 ? '+' : ''}{bd?.roundScore ?? 0}
-                            </span>
-                            <span className="text-slate-500">•</span>
-                            <span className="text-slate-400">Total</span>
-                            <span className="font-mono font-semibold text-white">{state.scores[p.id]}</span>
+                            {isTop && <span className="text-sm">{'\u{1F451}'}</span>}
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-                        {bd && (
-                          <div className="hidden text-right sm:block">
-                            <div className={`text-sm font-mono font-semibold ${roundClass}`}>
-                              {bd.roundScore > 0 ? '+' : ''}{bd.roundScore}
-                            </div>
-                            <div className="mt-0.5 flex gap-2 text-[11px] text-slate-400">
-                              <span className="text-rose-300">{bd.painCardPenalty > 0 ? '+' : ''}{bd.painCardPenalty}</span>
-                              <span className="text-emerald-300">+{bd.wonGoodCards}</span>
-                              {bd.wonPainPenalty !== 0 && <span className="text-rose-300">{bd.wonPainPenalty}</span>}
-                            </div>
-                          </div>
-                        )}
-                        {bd && <span className="text-sm text-slate-400">{expanded ? '▾' : '▸'}</span>}
+                      <div className="flex shrink-0 items-center gap-3 sm:gap-4">
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className={`text-lg font-black sm:text-xl ${roundClass}`}>
+                            {bd?.roundScore != null && bd.roundScore > 0 ? '+' : ''}{bd?.roundScore ?? 0}
+                          </span>
+                          <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500">round</span>
+                        </div>
+                        <div className="h-8 w-px bg-white/10" />
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-lg font-black sm:text-xl text-white">
+                            {state.scores[p.id]}
+                          </span>
+                          <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500">total</span>
+                        </div>
                       </div>
                     </button>
 
