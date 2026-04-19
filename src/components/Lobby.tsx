@@ -30,6 +30,8 @@ export function Lobby({ state, playerId, roomId, playerName, reconnecting = fals
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState(playerName);
   const [openPainCards, setOpenPainCards] = useState(false);
+  const [roundCount, setRoundCount] = useState(0);
+  const [turnTimer, setTurnTimer] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
   const [volume, setVolume] = useState(soundManager.getVolume());
   const hostId = state.hostId ?? state.players[0]?.id ?? null;
@@ -269,6 +271,40 @@ export function Lobby({ state, playerId, roomId, playerName, reconnecting = fals
                   />
                 </label>
 
+                <label className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-slate-900/60 px-3 py-3 mt-3">
+                  <div>
+                    <div className="font-medium text-white">Rounds</div>
+                    <div className="text-xs text-slate-400">How many rounds to play.</div>
+                  </div>
+                  <select
+                    value={roundCount}
+                    onChange={e => { soundManager.play('click'); setRoundCount(parseInt(e.target.value)); }}
+                    className="rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2 text-white outline-none focus:border-cyan-400/50"
+                  >
+                    <option value={0}>Auto ({state.players.length})</option>
+                    <option value={3}>3 (Quick)</option>
+                    <option value={5}>5 (Standard)</option>
+                    <option value={8}>8 (Long)</option>
+                  </select>
+                </label>
+
+                <label className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-slate-900/60 px-3 py-3 mt-3">
+                  <div>
+                    <div className="font-medium text-white">Turn Timer</div>
+                    <div className="text-xs text-slate-400">Auto-play if a player stalls.</div>
+                  </div>
+                  <select
+                    value={turnTimer}
+                    onChange={e => { soundManager.play('click'); setTurnTimer(parseInt(e.target.value)); }}
+                    className="rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2 text-white outline-none focus:border-cyan-400/50"
+                  >
+                    <option value={0}>Off</option>
+                    <option value={30}>30s</option>
+                    <option value={45}>45s</option>
+                    <option value={60}>60s</option>
+                  </select>
+                </label>
+
                 {state.players.length < 8 && (
                   <div className="mt-3 flex gap-2">
                     <select id="bot-type" className="flex-grow rounded-xl border border-white/10 bg-slate-900/80 px-3 py-3 text-white outline-none transition-colors focus:border-cyan-400/50">
@@ -296,7 +332,7 @@ export function Lobby({ state, playerId, roomId, playerName, reconnecting = fals
               <SectionTitle title="Actions" subtitle="Start once at least three players are in." />
               {isHost ? (
                 <button
-                  onClick={() => { soundManager.play('click'); sendAction('start_game', { openPainCards }); }}
+                  onClick={() => { soundManager.play('click'); sendAction('start_game', { openPainCards, roundCount, turnTimerSeconds: turnTimer }); }}
                   disabled={reconnecting || state.players.length < 3}
                   className={`w-full rounded-2xl px-4 py-4 text-base font-bold text-white transition-all ${reconnecting ? 'cursor-not-allowed bg-slate-700 text-slate-300' : state.players.length >= 3 ? 'bg-emerald-500 hover:bg-emerald-400 shadow-lg shadow-emerald-950/30' : 'cursor-not-allowed bg-slate-700 text-slate-300'}`}
                 >

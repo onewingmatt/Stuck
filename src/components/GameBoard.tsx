@@ -49,6 +49,16 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
   const [nextRoundCountdown, setNextRoundCountdown] = useState<number | null>(null);
   const nextRoundRef = useRef<number | null>(null);
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   if (!me) return <div className="flex items-center justify-center min-h-screen bg-slate-950 text-slate-400">Spectating...</div>;
 
   const isMyTurn = state.currentPlayerIndex === myIndex && state.status === 'playing_trick';
@@ -451,16 +461,24 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
 
   const renderHand = () => {
     if (!me) return null;
+    // Use small cards on mobile when hand is large
+    const useSmallMobile = isMobile && me.hand.length > 10;
 
     return (
-      <div className="flex overflow-x-auto space-x-[-1.5rem] sm:space-x-[-1rem] px-4 py-8 pb-4 custom-scrollbar" >
-        {me.hand.map((card) => {
+      <div
+        className="flex gap-1 sm:gap-2 overflow-x-auto sm:overflow-visible sm:flex-wrap sm:justify-center pb-2 px-2 snap-x snap-mandatory custom-scrollbar"
+        style={{ scrollPaddingInline: '0.5rem' }}
+      >
+        {me.hand.map((card, i) => {
           const isPainSuit = isPainCard(card.color);
           const matchesLead = leadHintCards.has(card.id);
 
           return (
-            <div key={card.id}
-              className={`relative transition-all duration-200 ${
+            <div
+              key={card.id}
+              className={`relative shrink-0 snap-start transition-all duration-200 ${
+                i === 0 ? 'ml-0' : '-ml-2 sm:ml-0'
+              } ${
                 selectedForPain === card.id ? 'opacity-50 scale-90' :
                 'hover:z-10 hover:-translate-y-2'
               }`}
@@ -469,6 +487,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
                 card={card}
                 onClick={() => handleCardClick(card.id)}
                 selected={selectedForPain === card.id}
+                small={useSmallMobile}
                 disabled={
                   reconnecting ||
                   (state.status === 'selecting_pain' && me.chosenPainCard !== null) ||

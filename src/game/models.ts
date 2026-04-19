@@ -56,6 +56,12 @@ export interface PlayerRoundBreakdown {
   details: ScoreContribution[];
 }
 
+export interface GameSettings {
+  roundCount: number; // 0 = auto (playerCount), or explicit 3/5/8
+  openPainCards: boolean;
+  turnTimerSeconds: number; // 0 = no timer, or 30/45/60
+}
+
 export interface GameState {
   roomId: string;
   hostId: string | null;
@@ -72,4 +78,6 @@ export interface GameState {
   openPainCards: boolean;
   roundBreakdown: Record<string, PlayerRoundBreakdown>;
   trickHistory: TrickLog[];
+  settings: GameSettings;
+  chatMessages: any[];
 }
