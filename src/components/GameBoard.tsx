@@ -417,11 +417,11 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
                           })}
                         </div>
 
-                        <div className="mt-3 flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-3 text-sm font-semibold text-white sm:px-4">
-                          <span>Round total</span>
-                          <span className={roundClass}>
+                        <div className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-4 text-center shadow-[0_0_0_1px_rgba(16,185,129,0.08)]">
+                          <div className="text-[11px] uppercase tracking-[0.3em] text-emerald-200/80">Total score</div>
+                          <div className={`mt-1 text-3xl font-black tracking-tight sm:text-4xl ${roundClass}`}>
                             {bd.roundScore > 0 ? '+' : ''}{bd.roundScore}
-                          </span>
+                          </div>
                         </div>
                       </div>
                     )}
