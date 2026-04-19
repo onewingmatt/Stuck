@@ -51,17 +51,24 @@ export function createInitialState(roomId: string): GameState {
     deckSizes: 0,
     openPainCards: false,
     roundBreakdown: {},
-    trickHistory: []
+    trickHistory: [],
+    settings: { roundCount: 0, openPainCards: false, turnTimerSeconds: 0 },
+    chatMessages: []
   };
 }
 
-export function startGame(state: GameState, options?: { openPainCards?: boolean }): GameState {
+export function startGame(state: GameState, options?: { openPainCards?: boolean; roundCount?: number; turnTimerSeconds?: number }): GameState {
   if (state.players.length < 3 || state.players.length > 8) return state;
 
   const newState = { ...state, roundNumber: 1 };
   if (options?.openPainCards) {
     newState.openPainCards = true;
   }
+  newState.settings = {
+    roundCount: options?.roundCount ?? 0,
+    openPainCards: options?.openPainCards ?? false,
+    turnTimerSeconds: options?.turnTimerSeconds ?? 0,
+  };
   newState.players.forEach((p: Player) => { newState.scores[p.id] = 0; });
   newState.dealerIndex = Math.floor(Math.random() * newState.players.length);
 
@@ -77,8 +84,9 @@ export function startRound(state: GameState): GameState {
     ...p, hand: [], wonCards: [], chosenPainCard: null, score: 0
   }));
 
+  const cardsPerPlayer = Math.floor(deck.length / newState.players.length);
   let cardIndex = 0;
-  for (let i = 0; i < 15; i++) {
+  for (let i = 0; i < cardsPerPlayer; i++) {
     for (let pIndex = 0; pIndex < newState.players.length; pIndex++) {
        newState.players[pIndex].hand.push(deck[cardIndex++]);
     }
@@ -267,14 +275,6 @@ export function endRound(state: GameState): GameState {
             }
         }
         
-        // Summary line for won cards
-        if (wonGoodCards > 0) {
-            details.push({ label: `Won cards (${wonGoodCards} total)`, value: wonGoodCards });
-        }
-        if (wonPainPenalty < 0) {
-            details.push({ label: `Pain suit penalty`, value: wonPainPenalty });
-        }
-        
         const roundScore = painPenalty + wonPainPenalty + wonGoodCards;
         player.score = roundScore;
         newState.scores[player.id] += roundScore;
@@ -292,7 +292,8 @@ export function endRound(state: GameState): GameState {
     
     newState.roundBreakdown = breakdown;
     
-    if (newState.roundNumber >= newState.players.length) {
+    const totalRounds = newState.settings?.roundCount || newState.players.length;
+    if (newState.roundNumber >= totalRounds) {
         newState.status = 'game_over';
     }
     
@@ -321,5 +322,5 @@ export function restartGame(state: GameState): GameState {
       leadColor: null,
       roundBreakdown: {},
       trickHistory: []
-    }, { openPainCards: state.openPainCards });
+    }, { openPainCards: state.openPainCards, roundCount: state.settings?.roundCount, turnTimerSeconds: state.settings?.turnTimerSeconds });
 }

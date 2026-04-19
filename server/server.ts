@@ -167,7 +167,12 @@ wss.on('connection', (ws) => {
       } else if (type === 'start_game') {
         const state = rooms[roomId];
         if (state && state.status === 'waiting' && state.players.length >= 3) {
-            rooms[roomId] = startGame(state, { openPainCards: payload?.openPainCards ?? false });
+            const settings = {
+              roundCount: payload?.roundCount ?? 0,
+              openPainCards: payload?.openPainCards ?? false,
+              turnTimerSeconds: payload?.turnTimerSeconds ?? 0
+            };
+            rooms[roomId] = startGame(state, settings);
             broadcast(roomId);
             processBotActions(roomId);
         }
