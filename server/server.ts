@@ -8,6 +8,8 @@ import { GameState, BotArchetype } from '../src/game/models.js';
 import { createInitialState, startGame, selectPainCard, playCard, clearTrick, nextRound, restartGame } from '../src/game/engine.js';
 import { doBotAction, BOT_ARCHETYPES } from '../src/game/ai.js';
 
+const DISCONNECT_TIMEOUT_MS = 120_000;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirnamePath = path.dirname(__filename);
 
@@ -25,6 +27,7 @@ app.use((req, res) => {
 
 const rooms: Record<string, GameState> = {};
 const clients = new Map<WebSocket, { roomId: string; playerId: string | null }>();
+const disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function getHostId(state: GameState) {
   return state.hostId ?? state.players[0]?.id ?? null;
@@ -49,6 +52,13 @@ function migrateHost(state: GameState) {
   }
 
   return false;
+}
+
+function removePlayer(state: GameState, playerId: string) {
+  state.players = state.players.filter(p => p.id !== playerId);
+  delete state.scores[playerId];
+  disconnectTimers.delete(playerId);
+  migrateHost(state);
 }
 
 function broadcast(roomId: string) {
@@ -102,6 +112,12 @@ wss.on('connection', (ws) => {
         clientInfo.roomId = roomId;
         clientInfo.playerId = playerId;
 
+        const existingTimer = disconnectTimers.get(playerId);
+        if (existingTimer) {
+          clearTimeout(existingTimer);
+          disconnectTimers.delete(playerId);
+        }
+
         const joinedName = payload?.playerName || playerName;
         const existingPlayer = state.players.find(p => p.id === playerId);
         if (existingPlayer) {
@@ -136,6 +152,17 @@ wss.on('connection', (ws) => {
                 hand: [], wonCards: [], chosenPainCard: null, score: 0, isBot: true, botConfig: { archetype, ...botConfig }, connected: true
             });
             broadcast(roomId);
+        }
+      } else if (type === 'remove_bot') {
+        const state = rooms[roomId];
+        const hostId = state?.hostId ?? state?.players[0]?.id;
+        if (state && state.status === 'waiting' && hostId === playerId && payload?.playerId) {
+          const target = state.players.find(p => p.id === payload.playerId && p.isBot);
+          if (target) {
+            removePlayer(state, target.id);
+            rooms[roomId] = state;
+            broadcast(roomId);
+          }
         }
       } else if (type === 'start_game') {
         const state = rooms[roomId];
@@ -177,13 +204,42 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     const info = clients.get(ws);
     if (info && info.roomId && info.playerId) {
-      const state = rooms[info.roomId];
+      const roomId = info.roomId;
+      const state = rooms[roomId];
       if (state) {
         const player = state.players.find(p => p.id === info.playerId);
         if (player) {
           player.connected = false;
           migrateHost(state);
-          broadcast(info.roomId);
+          broadcast(roomId);
+
+          if (!player.isBot && state.status !== 'waiting') {
+            const timer = setTimeout(() => {
+              disconnectTimers.delete(info.playerId!);
+              const current = rooms[roomId];
+              if (!current) return;
+              const still = current.players.find(p => p.id === info.playerId);
+              if (still && !still.connected) {
+                removePlayer(current, still.id);
+                current.status = 'waiting';
+                current.currentTrick = [];
+                current.leadColor = null;
+                current.trickWinnerIndex = null;
+                current.roundBreakdown = {};
+                current.trickHistory = [];
+                current.roundNumber = 0;
+                current.players.forEach(p => {
+                  p.hand = [];
+                  p.wonCards = [];
+                  p.chosenPainCard = null;
+                  p.score = 0;
+                });
+                rooms[roomId] = current;
+                broadcast(roomId);
+              }
+            }, DISCONNECT_TIMEOUT_MS);
+            disconnectTimers.set(info.playerId, timer);
+          }
         }
       }
     }
