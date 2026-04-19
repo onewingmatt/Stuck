@@ -9,6 +9,7 @@ export function useGameClient() {
   const [playerName, setPlayerName] = useState<string>('');
   const [connected, setConnected] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
+  const [connectionNotice, setConnectionNotice] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -54,9 +55,14 @@ export function useGameClient() {
     wsRef.current = ws;
 
     ws.onopen = () => {
+      const hadRetries = reconnectAttemptsRef.current > 0;
       reconnectAttemptsRef.current = 0;
       setConnected(true);
       setReconnecting(false);
+      if (hadRetries) {
+        setConnectionNotice(`Rejoined as ${playerName}`);
+        window.setTimeout(() => setConnectionNotice(null), 2500);
+      }
       ws.send(JSON.stringify({ type: 'join_room', roomId, playerId, playerName }));
     };
 
@@ -73,9 +79,11 @@ export function useGameClient() {
       setConnected(false);
       if (manualCloseRef.current || !roomId || !playerId) {
         setReconnecting(false);
+        setConnectionNotice(null);
         return;
       }
       setReconnecting(true);
+      setConnectionNotice('Rejoining…');
       const attempt = reconnectAttemptsRef.current++;
       const delay = Math.min(8000, 400 * (2 ** attempt));
       reconnectTimerRef.current = window.setTimeout(() => {
@@ -126,11 +134,12 @@ export function useGameClient() {
     setRoomId('');
     setConnected(false);
     setReconnecting(false);
+    setConnectionNotice(null);
     const url = new URL(window.location.href);
     url.searchParams.delete('mode');
     url.searchParams.delete('room');
     window.history.pushState({}, '', url);
   }, []);
 
-  return { state, playerId, playerName, roomId, setRoomId, connected, reconnecting, sendAction, changeName, leaveRoom };
+  return { state, playerId, playerName, roomId, setRoomId, connected, reconnecting, connectionNotice, sendAction, changeName, leaveRoom };
 }
