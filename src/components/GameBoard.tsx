@@ -180,7 +180,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
     for (let i = 1; i < state.players.length; i++) others.push(state.players[(myIndex + i) % state.players.length]);
 
     return (
-      <div className="flex justify-center flex-wrap gap-4 mb-8 px-3">
+      <div className="flex justify-center flex-wrap gap-2 sm:gap-4 mb-4 sm:mb-8 px-2 sm:px-3">
         {others.map((p) => {
             const isThinking = state.currentPlayerIndex === state.players.findIndex(x => x.id === p.id) && state.status === 'playing_trick';
             return (
@@ -219,7 +219,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
     if (!player || player.wonCards.length === 0) return null;
     const painColor = player.chosenPainCard?.color;
     return (
-      <div className="fixed inset-x-0 bottom-24 z-40 mx-auto w-max max-w-2xl px-4 animate-[fadeInUp_0.25s_ease-out]">
+      <div className="fixed inset-x-2 sm:inset-x-auto bottom-28 sm:bottom-24 z-40 mx-auto w-[calc(100vw-1rem)] sm:w-max sm:max-w-2xl px-3 sm:px-4 animate-[fadeInUp_0.25s_ease-out]">
         
         <div className="rounded-2xl border border-white/10 bg-slate-950/95 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl anim-fade-in-up">
           <div className="flex justify-between items-center mb-2">
@@ -254,7 +254,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
               Lead: {state.leadColor}
             </div>
         )}
-        <div className="flex space-x-3">
+        <div className="flex gap-2 sm:gap-3 flex-wrap justify-center">
             {state.currentTrick.map(tc => {
                 const pName = state.players.find(p => p.id === tc.playerId)?.name;
                 const pIdx = state.players.findIndex(p => p.id === tc.playerId);
@@ -265,7 +265,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
                     <div key={tc.playerId} className={`flex flex-col items-center ${
                       isWinner && justResolved ? 'anim-winner-glow' : ''
                     }`}>
-                        <span className="text-xs mb-2 truncate w-20 text-center text-gray-300">{pName}</span>
+                        <span className="text-[10px] sm:text-xs mb-1.5 sm:mb-2 truncate w-14 sm:w-20 text-center text-gray-300">{pName}</span>
                         <div className={animState?.anim === 'deal-in' ? 'anim-deal-in' : animState?.anim === 'collect' ? 'anim-collect' : ''}
                              style={animState?.anim === 'collect' ? { transitionDelay: `${pIdx * 0.08}s` } : undefined}>
                           <CardView card={tc.card} disabled />
@@ -298,8 +298,8 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
     return (
       <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/85 backdrop-blur-sm px-3 py-3 sm:p-4">
         <div className="w-full max-w-2xl max-h-[92vh] overflow-hidden rounded-2xl border border-white/10 bg-slate-950 shadow-2xl">
-          <div className="border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5 bg-slate-900/80">
-            <h2 className="text-center text-xl sm:text-2xl font-bold text-white">
+          <div className="border-b border-white/10 px-3 py-3 sm:px-6 sm:py-5 bg-slate-900/80">
+            <h2 className="text-center text-lg sm:text-2xl font-bold text-white">
               {state.status === 'game_over' ? '🏆 Game Over' : 'Round Complete'}
             </h2>
             <p className="mt-1 text-center text-xs sm:text-sm text-slate-400">
@@ -508,16 +508,16 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
 
   return (
       <div className="flex flex-col h-screen bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.16),_transparent_30%),linear-gradient(180deg,#0f172a_0%,#1e293b_45%,#022c22_100%)] text-white p-4 overflow-hidden relative">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-3 sm:mb-4 flex items-center justify-between">
         <button
           onClick={() => { soundManager.play('click'); leaveRoom(); }}
-          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
+          className="rounded-lg sm:rounded-xl border border-white/10 bg-white/5 px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium text-slate-300 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
           title="Leave this room"
         >
           ← Leave
         </button>
         <div className="flex flex-col items-center gap-1 text-center">
-          <div className="font-mono text-sm tracking-wider text-green-300/70">
+          <div className="font-mono text-xs sm:text-sm tracking-wider text-green-300/70">
             Round {state.roundNumber} of {state.players.length}
           </div>
           {reconnecting && (
@@ -528,7 +528,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
         </div>
         <button
           onClick={() => { soundManager.play('click'); setShowHistory(v => !v); }}
-          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
+          className="rounded-lg sm:rounded-xl border border-white/10 bg-white/5 px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium text-slate-300 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
           title="Show trick history"
         >
           History
@@ -554,11 +554,11 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
       </div>
 
       {/* Bottom hand area */}
-      <div className="mt-auto -mx-4 border-t border-white/10 bg-black/20 px-4 pb-4 pt-4 backdrop-blur-sm">
-        <div className="mb-4 flex items-end justify-between gap-4">
+      <div className="mt-auto -mx-4 border-t border-white/10 bg-black/20 px-4 pb-4 pt-4 backdrop-blur-sm" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
+        <div className="mb-2 sm:mb-4 flex items-end justify-between gap-2 sm:gap-4">
             <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold tracking-wide">{me.name} (You)</span>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="font-bold text-sm sm:text-base tracking-wide">{me.name} (You)</span>
                   {myPainColor && (
                         <div className="flex items-center gap-1 text-xs text-slate-400">
                       {getPainDot(myPainColor, 'w-3 h-3')}
@@ -576,7 +576,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
       {renderOtherPlayers()}
       {renderWonPilePopup()}
       {showHistory && (
-        <div className="fixed right-4 top-20 z-40 w-[min(420px,calc(100vw-2rem))] rounded-2xl border border-white/10 bg-slate-950/95 p-4 shadow-2xl shadow-black/40 backdrop-blur-xl">
+        <div className="fixed inset-x-2 sm:inset-x-auto sm:right-4 top-20 z-40 w-[calc(100vw-1rem)] sm:w-[min(420px,calc(100vw-2rem))] rounded-2xl border border-white/10 bg-slate-950/95 p-3 sm:p-4 shadow-2xl shadow-black/40 backdrop-blur-xl">
           <div className="mb-3 flex items-center justify-between">
             <div>
               <div className="text-[11px] uppercase tracking-[0.28em] text-slate-500">Trick history</div>
