@@ -34,8 +34,6 @@ export function Lobby({ state, playerId, roomId, playerName, reconnecting = fals
   const [turnTimer, setTurnTimer] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
   const [volume, setVolume] = useState(soundManager.getVolume());
-  const hostId = state.hostId ?? state.players[0]?.id ?? null;
-
   if (!roomId || !state) {
     return (
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.20),_transparent_40%),linear-gradient(180deg,#0f172a_0%,#111827_45%,#020617_100%)] text-white px-4 py-10">
@@ -171,6 +169,7 @@ export function Lobby({ state, playerId, roomId, playerName, reconnecting = fals
     );
   }
 
+  const hostId = state.hostId ?? state.players[0]?.id ?? null;
   const isHost = hostId === playerId;
 
   return (
