@@ -62,6 +62,14 @@ export interface GameSettings {
   turnTimerSeconds: number; // 0 = no timer, or 30/45/60
 }
 
+export interface ChatMessage {
+  id: string;
+  playerId: string;
+  playerName: string;
+  text: string;
+  timestamp: number;
+}
+
 export interface GameState {
   roomId: string;
   hostId: string | null;
@@ -79,5 +87,5 @@ export interface GameState {
   roundBreakdown: Record<string, PlayerRoundBreakdown>;
   trickHistory: TrickLog[];
   settings: GameSettings;
-  chatMessages: any[];
+  chatMessages: ChatMessage[];
 }

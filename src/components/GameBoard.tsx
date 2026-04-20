@@ -3,6 +3,50 @@ import { type GameState, type CardColor } from '../game/models.js';
 import { CardView } from './CardView';
 import { soundManager } from '../game/soundManager';
 
+interface PlayerStatEntry {
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  totalScore: number;
+  bestRoundScore: number;
+}
+
+function loadStats(): Record<string, PlayerStatEntry> {
+  try {
+    return JSON.parse(localStorage.getItem('stickem_stats') || '{}');
+  } catch { return {}; }
+}
+
+function saveStats(stats: Record<string, PlayerStatEntry>) {
+  localStorage.setItem('stickem_stats', JSON.stringify(stats));
+}
+
+function recordGameEnd(players: { id: string; name: string; score: number }[], myId: string, roundBreakdown: Record<string, any>) {
+  const stats = loadStats();
+  const sorted = [...players].sort((a, b) => b.score - a.score);
+  const winnerId = sorted[0]?.id;
+
+  if (!stats[myId]) {
+    stats[myId] = { gamesPlayed: 0, wins: 0, losses: 0, totalScore: 0, bestRoundScore: 0 };
+  }
+
+  const me = players.find(p => p.id === myId);
+  if (me) {
+    stats[myId].gamesPlayed++;
+    stats[myId].totalScore += me.score;
+    if (myId === winnerId) stats[myId].wins++;
+    else stats[myId].losses++;
+
+    // Find best round score from breakdown
+    const myBreakdown = roundBreakdown[myId];
+    if (myBreakdown && myBreakdown.roundScore > stats[myId].bestRoundScore) {
+      stats[myId].bestRoundScore = myBreakdown.roundScore;
+    }
+  }
+
+  saveStats(stats);
+}
+
 interface GameBoardProps {
   state: GameState;
   playerId: string;
@@ -108,6 +152,17 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
   useEffect(() => {
     if (state.status === 'round_over' || state.status === 'game_over') {
       soundManager.play('round_over');
+    }
+  }, [state.status]);
+
+  // Record persistent stats when game ends
+  useEffect(() => {
+    if (state.status === 'game_over' && me) {
+      recordGameEnd(
+        state.players.map(p => ({ id: p.id, name: p.name, score: state.scores[p.id] })),
+        playerId,
+        state.roundBreakdown
+      );
     }
   }, [state.status]);
 
@@ -317,6 +372,26 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
                   <span>Rounds: <span className="font-semibold text-white">{state.roundNumber}</span></span>
                 </div>
               </div>
+            )}
+            {state.status === 'game_over' && (
+              (() => {
+                const stats = loadStats();
+                const my = stats[playerId];
+                if (!my || my.gamesPlayed === 0) return null;
+                return (
+                  <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-center">
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Your Stats</div>
+                    <div className="flex justify-center gap-4 text-sm">
+                      <div><span className="font-bold text-white">{my.gamesPlayed}</span> <span className="text-slate-400">played</span></div>
+                      <div><span className="font-bold text-emerald-400">{my.wins}</span> <span className="text-slate-400">wins</span></div>
+                      <div><span className="font-bold text-rose-400">{my.losses}</span> <span className="text-slate-400">losses</span></div>
+                    </div>
+                    {my.bestRoundScore > 0 && (
+                      <div className="mt-1 text-xs text-slate-500">Best round: <span className="text-amber-400 font-medium">{my.bestRoundScore}</span></div>
+                    )}
+                  </div>
+                );
+              })()
             )}
             {state.status === 'game_over' && (
               <div className="mt-4 flex flex-wrap justify-center gap-2">
