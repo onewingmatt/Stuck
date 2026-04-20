@@ -33,17 +33,17 @@ export function CardView({ card, onClick, selected, disabled, small, glow }: Car
     <div 
       onClick={disabled ? undefined : onClick}
       className={`
-        relative isolate flex items-center justify-center overflow-visible rounded-2xl font-bold text-white transition-all duration-200 ease-out
-        ${small ? 'h-16 w-12 text-lg' : 'h-24 w-16 text-2xl sm:h-32 sm:w-20 sm:text-3xl'}
+        relative isolate flex items-center justify-center overflow-visible font-bold text-white transition-all duration-200 ease-out
+        ${small ? 'h-16 w-12 text-lg rounded-lg' : 'h-24 w-16 text-2xl sm:h-32 sm:w-20 sm:text-3xl rounded-2xl'}
         bg-gradient-to-br ${bgClass}
         ${selected ? 'z-20 -translate-y-5 scale-[1.04] ring-2 ring-cyan-300/70 shadow-[0_18px_40px_rgba(0,0,0,0.45)]' : glow ? `ring-1 ring-white/25 ${glow}` : 'ring-1 ring-white/20 shadow-[0_10px_24px_rgba(0,0,0,0.3)]'}
         ${disabled ? 'opacity-40 cursor-not-allowed saturate-50' : small ? '' : 'cursor-pointer card-hover-lift'}
       `}
     >
-      <div className="absolute inset-0 rounded-2xl bg-[linear-gradient(135deg,rgba(255,255,255,0.24),rgba(255,255,255,0.02)_30%,rgba(0,0,0,0.12)_100%)]" />
-      <div className="absolute left-1.5 top-1.5 text-[10px] font-black uppercase tracking-wider opacity-80 leading-none">{sym}</div>
+      <div className={`absolute inset-0 ${small ? 'rounded-lg' : 'rounded-2xl'} bg-[linear-gradient(135deg,rgba(255,255,255,0.24),rgba(255,255,255,0.02)_30%,rgba(0,0,0,0.12)_100%)]`} />
+      <div className={`absolute ${small ? 'left-1 top-1 text-[8px]' : 'left-1.5 top-1.5 text-[10px]'} font-black uppercase tracking-wider opacity-80 leading-none`}>{sym}</div>
       <div className="relative z-10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">{card.value}</div>
-      <div className="absolute bottom-1.5 right-1.5 text-[10px] font-black uppercase tracking-wider opacity-80 rotate-180 leading-none">{sym}</div>
+      <div className={`absolute ${small ? 'right-1 bottom-1 text-[8px]' : 'right-1.5 bottom-1.5 text-[10px]'} font-black uppercase tracking-wider opacity-80 rotate-180 leading-none`}>{sym}</div>
     </div>
   );
 }
