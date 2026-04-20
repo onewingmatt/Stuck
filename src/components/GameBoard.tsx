@@ -180,29 +180,29 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
     for (let i = 1; i < state.players.length; i++) others.push(state.players[(myIndex + i) % state.players.length]);
 
     return (
-      <div className="flex justify-center flex-wrap gap-4 mb-8 px-3">
+      <div className="flex justify-center sm:flex-wrap gap-2 sm:gap-4 mb-2 sm:mb-8 px-2 sm:px-3 overflow-x-auto snap-x snap-mandatory sm:overflow-visible custom-scrollbar pb-1">
         {others.map((p) => {
             const isThinking = state.currentPlayerIndex === state.players.findIndex(x => x.id === p.id) && state.status === 'playing_trick';
             return (
-                <div key={p.id} className={`flex flex-col items-center rounded-2xl border px-4 py-3 text-sm shadow-lg transition-all duration-300 ${
+                <div key={p.id} className={`flex flex-col items-center rounded-xl sm:rounded-2xl border px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm shadow-lg transition-all duration-300 shrink-0 snap-start ${
                     isThinking
                         ? 'border-yellow-300/40 bg-yellow-500/20 ring-2 ring-yellow-400/40 scale-105'
                         : 'border-white/10 bg-white/5 hover:bg-white/10'
                 }`}>
-                    <div className="flex items-center gap-2">
-                        <span className="font-semibold">{p.name}</span>
-                        {state.status !== 'selecting_pain' && getPainDot(p.chosenPainCard?.color, 'w-3 h-3')}
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                        <span className="font-semibold truncate max-w-[4.5rem] sm:max-w-none">{p.name}</span>
+                        {state.status !== 'selecting_pain' && getPainDot(p.chosenPainCard?.color, 'w-2.5 h-2.5 sm:w-3 sm:h-3')}
                     </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-slate-400/90">
-                        <span>Score: <span className="text-white font-mono">{state.scores[p.id]}</span></span>
-                        <span>Cards: <span className="text-white font-mono">{p.hand.length}</span></span>
+                        <div className="flex items-center gap-2 sm:gap-3 mt-1 text-[10px] sm:text-xs text-slate-400/90">
+                        <span><span className="text-white font-mono">{state.scores[p.id]}</span>pts</span>
+                        <span><span className="text-white font-mono">{p.hand.length}</span>c</span>
                         {p.wonCards.length > 0 && (
                             <button
-                              className="relative flex items-center justify-center rounded-lg border border-white/15 bg-white/10 px-2 py-1 text-xs font-medium text-slate-300 transition-colors hover:bg-white/15 active:scale-[0.98]"
+                              className="relative flex items-center justify-center rounded-md sm:rounded-lg border border-white/15 bg-white/10 px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium text-slate-300 transition-colors hover:bg-white/15 active:scale-[0.98]"
                               onClick={() => setShowWonPiles(showWonPiles === p.id ? null : p.id)}
                               title={`${p.wonCards.length} won cards`}
                             >
-                              {p.wonCards.length} cards
+                              {p.wonCards.length}
                             </button>
                         )}
                     </div>
@@ -250,29 +250,30 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
     return (
       <div className="flex min-h-[200px] flex-col items-center justify-center my-4">
         {state.leadColor && (
-            <div className="mb-3 px-3 py-1 rounded-full bg-white/10 text-sm font-medium backdrop-blur-sm">
+            <div className="mb-2 sm:mb-3 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-white/10 text-[11px] sm:text-sm font-medium backdrop-blur-sm">
               Lead: {state.leadColor}
             </div>
         )}
-        <div className="flex space-x-3">
+        <div className="flex gap-1.5 sm:gap-3 flex-wrap justify-center">
             {state.currentTrick.map(tc => {
                 const pName = state.players.find(p => p.id === tc.playerId)?.name;
                 const pIdx = state.players.findIndex(p => p.id === tc.playerId);
                 const isWinner = state.trickWinnerIndex === pIdx;
                 const animState = animCards[tc.playerId];
+                const manyPlayers = state.players.length >= 5;
 
                 return (
                     <div key={tc.playerId} className={`flex flex-col items-center ${
                       isWinner && justResolved ? 'anim-winner-glow' : ''
                     }`}>
-                        <span className="text-xs mb-2 truncate w-20 text-center text-gray-300">{pName}</span>
+                        <span className="text-[9px] sm:text-xs mb-1 sm:mb-2 truncate w-12 sm:w-20 text-center text-gray-300">{pName}</span>
                         <div className={animState?.anim === 'deal-in' ? 'anim-deal-in' : animState?.anim === 'collect' ? 'anim-collect' : ''}
                              style={animState?.anim === 'collect' ? { transitionDelay: `${pIdx * 0.08}s` } : undefined}>
-                          <CardView card={tc.card} disabled />
+                          <CardView card={tc.card} disabled small={manyPlayers && isMobile} />
                         </div>
-                        {isWinner && !justResolved && <div className="mt-2 text-xs text-green-400 font-bold anim-fade-in-up">Winner</div>}
+                        {isWinner && !justResolved && <div className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-green-400 font-bold anim-fade-in-up">Winner</div>}
                     </div>
-                )
+                );
             })}
         </div>
         {state.currentTrick.length === state.players.length && (
@@ -507,17 +508,17 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
   };
 
   return (
-      <div className="flex flex-col h-screen bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.16),_transparent_30%),linear-gradient(180deg,#0f172a_0%,#1e293b_45%,#022c22_100%)] text-white p-4 overflow-hidden relative">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="flex flex-col h-screen bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.16),_transparent_30%),linear-gradient(180deg,#0f172a_0%,#1e293b_45%,#022c22_100%)] text-white p-3 sm:p-4 overflow-hidden relative">
+      <div className="mb-2 sm:mb-4 flex items-center justify-between">
         <button
           onClick={() => { soundManager.play('click'); leaveRoom(); }}
-          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
+          className="rounded-lg sm:rounded-xl border border-white/10 bg-white/5 px-2 sm:px-3 py-1 sm:py-2 text-[11px] sm:text-xs font-medium text-slate-300 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
           title="Leave this room"
         >
           ← Leave
         </button>
         <div className="flex flex-col items-center gap-1 text-center">
-          <div className="font-mono text-sm tracking-wider text-green-300/70">
+          <div className="font-mono text-xs sm:text-sm tracking-wider text-green-300/70">
             Round {state.roundNumber} of {state.players.length}
           </div>
           {reconnecting && (
@@ -528,7 +529,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
         </div>
         <button
           onClick={() => { soundManager.play('click'); setShowHistory(v => !v); }}
-          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
+          className="rounded-lg sm:rounded-xl border border-white/10 bg-white/5 px-2 sm:px-3 py-1 sm:py-2 text-[11px] sm:text-xs font-medium text-slate-300 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]"
           title="Show trick history"
         >
           History
@@ -554,19 +555,19 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
       </div>
 
       {/* Bottom hand area */}
-      <div className="mt-auto -mx-4 border-t border-white/10 bg-black/20 px-4 pb-4 pt-4 backdrop-blur-sm">
-        <div className="mb-4 flex items-end justify-between gap-4">
+      <div className="mt-auto -mx-3 sm:-mx-4 border-t border-white/10 bg-black/20 px-3 sm:px-4 pb-3 sm:pb-4 pt-3 sm:pt-4 backdrop-blur-sm" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
+        <div className="mb-2 sm:mb-4 flex items-end justify-between gap-2 sm:gap-4">
             <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold tracking-wide">{me.name} (You)</span>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="font-bold text-sm sm:text-base tracking-wide">{me.name}</span>
                   {myPainColor && (
-                        <div className="flex items-center gap-1 text-xs text-slate-400">
-                      {getPainDot(myPainColor, 'w-3 h-3')}
-                      <span>Pain: {myPainColor}</span>
+                        <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-400">
+                      {getPainDot(myPainColor, 'w-2.5 h-2.5 sm:w-3 sm:h-3')}
+                      <span>{myPainColor}</span>
                     </div>
                   )}
                 </div>
-                <div className="text-sm text-slate-400">Score: {state.scores[me.id]}</div>
+                <div className="text-xs sm:text-sm text-slate-400">{state.scores[me.id]} pts</div>
             </div>
         </div>
         {renderHand()}
