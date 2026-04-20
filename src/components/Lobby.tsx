@@ -34,6 +34,7 @@ export function Lobby({ state, playerId, roomId, playerName, reconnecting = fals
   const [turnTimer, setTurnTimer] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
   const [volume, setVolume] = useState(soundManager.getVolume());
+  const [chatInput, setChatInput] = useState('');
   if (!roomId || !state) {
     return (
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.20),_transparent_40%),linear-gradient(180deg,#0f172a_0%,#111827_45%,#020617_100%)] text-white px-4 py-10">
@@ -81,19 +82,39 @@ export function Lobby({ state, playerId, roomId, playerName, reconnecting = fals
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-xs uppercase tracking-wider text-slate-400">Current name</div>
-                      <div className="mt-1 text-lg font-semibold text-white">{playerName}</div>
+                  <>
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs uppercase tracking-wider text-slate-400">Current name</div>
+                        <div className="mt-1 text-lg font-semibold text-white">{playerName}</div>
+                      </div>
+                      <button
+                        disabled={reconnecting}
+                      className={`rounded-xl border px-3 py-2 text-sm font-medium transition-all active:scale-[0.98] ${reconnecting ? 'cursor-not-allowed border-white/5 bg-white/5 text-slate-500' : 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white'}`}
+                        onClick={() => { soundManager.play('click'); setEditingName(true); }}
+                      >
+                        Edit
+                      </button>
                     </div>
-                    <button
-                      disabled={reconnecting}
-                    className={`rounded-xl border px-3 py-2 text-sm font-medium transition-all active:scale-[0.98] ${reconnecting ? 'cursor-not-allowed border-white/5 bg-white/5 text-slate-500' : 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white'}`}
-                      onClick={() => { soundManager.play('click'); setEditingName(true); }}
-                    >
-                      Edit
-                    </button>
-                  </div>
+                    {(() => {
+                      try {
+                        const stats = JSON.parse(localStorage.getItem('stickem_stats') || '{}');
+                        const my = stats[playerId];
+                        if (!my || my.gamesPlayed === 0) return null;
+                        return (
+                          <div className="mt-3 pt-3 border-t border-white/10">
+                            <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-1.5">Lifetime Stats</div>
+                            <div className="flex gap-3 text-xs">
+                              <span className="text-slate-400">{my.gamesPlayed} played</span>
+                              <span className="text-emerald-400">{my.wins}W</span>
+                              <span className="text-rose-400">{my.losses}L</span>
+                              {my.bestRoundScore > 0 && <span className="text-amber-400">best: {my.bestRoundScore}</span>}
+                            </div>
+                          </div>
+                        );
+                      } catch { return null; }
+                    })()}
+                  </>
                 )}
 
                 <div className="mt-4 border-t border-white/10 pt-4 space-y-4">
@@ -253,7 +274,7 @@ export function Lobby({ state, playerId, roomId, playerName, reconnecting = fals
             </div>
           </div>
 
-          <div className="space-y-4 rounded-3xl border border-white/10 bg-slate-950/55 p-5 shadow-2xl shadow-black/25 backdrop-blur-xl">
+          <div className="space-y-4 flex flex-col rounded-3xl border border-white/10 bg-slate-950/55 p-5 shadow-2xl shadow-black/25 backdrop-blur-xl">
             {isHost && (
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <SectionTitle title="Match options" subtitle="Tweak the game before you start." />
@@ -342,6 +363,51 @@ export function Lobby({ state, playerId, roomId, playerName, reconnecting = fals
                   Waiting for host to start...
                 </div>
               )}
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex flex-col" style={{ maxHeight: '300px' }}>
+              <SectionTitle title="Chat" subtitle="Talk with other players." />
+              <div className="flex-1 overflow-y-auto space-y-1.5 mb-3 min-h-0" style={{ maxHeight: '180px' }}>
+                {(state.chatMessages || []).map((msg: any) => (
+                  <div key={msg.id} className="text-sm">
+                    <span className="font-medium text-slate-300">{msg.playerName}:</span>{' '}
+                    <span className="text-slate-400">{msg.text}</span>
+                  </div>
+                ))}
+                {(!state.chatMessages || state.chatMessages.length === 0) && (
+                  <div className="text-xs text-slate-600 italic">No messages yet</div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Type a message..."
+                  className="flex-grow rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-slate-500 focus:border-cyan-400/50"
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && chatInput.trim()) {
+                      sendAction('chat_message', { text: chatInput.trim() });
+                      setChatInput('');
+                    }
+                  }}
+                  disabled={reconnecting}
+                  maxLength={200}
+                />
+                <button
+                  onClick={() => {
+                    if (chatInput.trim()) {
+                      soundManager.play('click');
+                      sendAction('chat_message', { text: chatInput.trim() });
+                      setChatInput('');
+                    }
+                  }}
+                  disabled={reconnecting || !chatInput.trim()}
+                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-200 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Send
+                </button>
+              </div>
             </div>
           </div>
         </div>

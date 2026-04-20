@@ -200,6 +200,26 @@ wss.on('connection', (ws) => {
           broadcast(roomId);
           processBotActions(roomId);
         }
+      } else if (type === 'chat_message' && rooms[roomId]) {
+        const state = rooms[roomId];
+        const player = state.players.find(p => p.id === playerId);
+        if (player && payload?.text && typeof payload.text === 'string') {
+          const text = payload.text.trim().substring(0, 200);
+          if (text) {
+            state.chatMessages.push({
+              id: uuidv4(),
+              playerId,
+              playerName: player.name,
+              text,
+              timestamp: Date.now()
+            });
+            // Keep last 50 messages
+            if (state.chatMessages.length > 50) {
+              state.chatMessages = state.chatMessages.slice(-50);
+            }
+            broadcast(roomId);
+          }
+        }
       }
     } catch (e) {
       console.error("Error processing message", e);
