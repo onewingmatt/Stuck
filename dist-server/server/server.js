@@ -4,8 +4,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import { v4 as uuidv4 } from 'uuid';
-import { createInitialState, startGame, selectPainCard, playCard, clearTrick, nextRound } from '../src/game/engine.js';
+import { createInitialState, startGame, selectPainCard, playCard, clearTrick, nextRound, restartGame } from '../src/game/engine.js';
 import { doBotAction, BOT_ARCHETYPES } from '../src/game/ai.js';
+const DISCONNECT_TIMEOUT_MS = 120_000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirnamePath = path.dirname(__filename);
 const app = express();
@@ -18,6 +19,32 @@ app.use((req, res) => {
 });
 const rooms = {};
 const clients = new Map();
+const disconnectTimers = new Map();
+function getHostId(state) {
+    return state.hostId ?? state.players[0]?.id ?? null;
+}
+function setHostId(state, hostId) {
+    state.hostId = hostId;
+}
+function migrateHost(state) {
+    const currentHostId = getHostId(state);
+    const currentHost = currentHostId ? state.players.find(p => p.id === currentHostId) : null;
+    if (currentHost?.connected)
+        return false;
+    const nextHost = state.players.find(p => p.connected && !p.isBot) ?? state.players[0] ?? null;
+    const nextHostId = nextHost?.id ?? null;
+    if (state.hostId !== nextHostId) {
+        setHostId(state, nextHostId);
+        return true;
+    }
+    return false;
+}
+function removePlayer(state, playerId) {
+    state.players = state.players.filter(p => p.id !== playerId);
+    delete state.scores[playerId];
+    disconnectTimers.delete(playerId);
+    migrateHost(state);
+}
 function broadcast(roomId) {
     const state = rooms[roomId];
     if (!state)
@@ -70,17 +97,31 @@ wss.on('connection', (ws) => {
                 }
                 clientInfo.roomId = roomId;
                 clientInfo.playerId = playerId;
+                const existingTimer = disconnectTimers.get(playerId);
+                if (existingTimer) {
+                    clearTimeout(existingTimer);
+                    disconnectTimers.delete(playerId);
+                }
+                const joinedName = payload?.playerName || playerName;
                 const existingPlayer = state.players.find(p => p.id === playerId);
                 if (existingPlayer) {
                     existingPlayer.connected = true;
-                    existingPlayer.name = playerName || existingPlayer.name;
+                    existingPlayer.name = joinedName || existingPlayer.name;
                 }
-                else if (state.status === 'waiting' && state.players.length < 6) {
+                else if (state.status === 'waiting' && state.players.length < 8) {
                     state.players.push({
                         id: playerId,
-                        name: playerName || `Player ${state.players.length + 1}`,
+                        name: joinedName || `Player ${state.players.length + 1}`,
                         hand: [], wonCards: [], chosenPainCard: null, score: 0, isBot: false, connected: true
                     });
+                }
+                if (!state.hostId) {
+                    const hostCandidate = state.players.find(p => p.connected && !p.isBot) ?? state.players[0] ?? null;
+                    if (hostCandidate)
+                        setHostId(state, hostCandidate.id);
+                }
+                else {
+                    migrateHost(state);
                 }
                 rooms[roomId] = state;
                 ws.send(JSON.stringify({ type: 'state_update', state }));
@@ -89,21 +130,40 @@ wss.on('connection', (ws) => {
             }
             else if (type === 'add_bot') {
                 const state = rooms[roomId];
-                if (state && state.status === 'waiting' && state.players.length < 6) {
+                if (state && state.status === 'waiting' && state.players.length < 8) {
                     const archetype = (payload?.archetype || 'Average');
                     const botConfig = BOT_ARCHETYPES[archetype];
+                    const existingCount = state.players.filter(p => p.isBot && p.botConfig?.archetype === archetype).length;
+                    const botName = existingCount === 0 ? `${archetype} Bot` : `${archetype} Bot #${existingCount + 1}`;
                     state.players.push({
                         id: `bot-${uuidv4()}`,
-                        name: `${archetype} Bot`,
+                        name: botName,
                         hand: [], wonCards: [], chosenPainCard: null, score: 0, isBot: true, botConfig: { archetype, ...botConfig }, connected: true
                     });
                     broadcast(roomId);
                 }
             }
+            else if (type === 'remove_bot') {
+                const state = rooms[roomId];
+                const hostId = state?.hostId ?? state?.players[0]?.id;
+                if (state && state.status === 'waiting' && hostId === playerId && payload?.playerId) {
+                    const target = state.players.find(p => p.id === payload.playerId && p.isBot);
+                    if (target) {
+                        removePlayer(state, target.id);
+                        rooms[roomId] = state;
+                        broadcast(roomId);
+                    }
+                }
+            }
             else if (type === 'start_game') {
                 const state = rooms[roomId];
                 if (state && state.status === 'waiting' && state.players.length >= 3) {
-                    rooms[roomId] = startGame(state);
+                    const settings = {
+                        roundCount: payload?.roundCount ?? 0,
+                        openPainCards: payload?.openPainCards ?? false,
+                        turnTimerSeconds: payload?.turnTimerSeconds ?? 0
+                    };
+                    rooms[roomId] = startGame(state, settings);
                     broadcast(roomId);
                     processBotActions(roomId);
                 }
@@ -128,6 +188,36 @@ wss.on('connection', (ws) => {
                 broadcast(roomId);
                 processBotActions(roomId);
             }
+            else if (type === 'play_again' && rooms[roomId]) {
+                const state = rooms[roomId];
+                const hostId = state.hostId ?? state.players[0]?.id;
+                if (state.status === 'game_over' && hostId === playerId) {
+                    rooms[roomId] = restartGame(state);
+                    broadcast(roomId);
+                    processBotActions(roomId);
+                }
+            }
+            else if (type === 'chat_message' && rooms[roomId]) {
+                const state = rooms[roomId];
+                const player = state.players.find(p => p.id === playerId);
+                if (player && payload?.text && typeof payload.text === 'string') {
+                    const text = payload.text.trim().substring(0, 200);
+                    if (text) {
+                        state.chatMessages.push({
+                            id: uuidv4(),
+                            playerId,
+                            playerName: player.name,
+                            text,
+                            timestamp: Date.now()
+                        });
+                        // Keep last 50 messages
+                        if (state.chatMessages.length > 50) {
+                            state.chatMessages = state.chatMessages.slice(-50);
+                        }
+                        broadcast(roomId);
+                    }
+                }
+            }
         }
         catch (e) {
             console.error("Error processing message", e);
@@ -136,12 +226,42 @@ wss.on('connection', (ws) => {
     ws.on('close', () => {
         const info = clients.get(ws);
         if (info && info.roomId && info.playerId) {
-            const state = rooms[info.roomId];
+            const roomId = info.roomId;
+            const state = rooms[roomId];
             if (state) {
                 const player = state.players.find(p => p.id === info.playerId);
                 if (player) {
                     player.connected = false;
-                    broadcast(info.roomId);
+                    migrateHost(state);
+                    broadcast(roomId);
+                    if (!player.isBot && state.status !== 'waiting') {
+                        const timer = setTimeout(() => {
+                            disconnectTimers.delete(info.playerId);
+                            const current = rooms[roomId];
+                            if (!current)
+                                return;
+                            const still = current.players.find(p => p.id === info.playerId);
+                            if (still && !still.connected) {
+                                removePlayer(current, still.id);
+                                current.status = 'waiting';
+                                current.currentTrick = [];
+                                current.leadColor = null;
+                                current.trickWinnerIndex = null;
+                                current.roundBreakdown = {};
+                                current.trickHistory = [];
+                                current.roundNumber = 0;
+                                current.players.forEach(p => {
+                                    p.hand = [];
+                                    p.wonCards = [];
+                                    p.chosenPainCard = null;
+                                    p.score = 0;
+                                });
+                                rooms[roomId] = current;
+                                broadcast(roomId);
+                            }
+                        }, DISCONNECT_TIMEOUT_MS);
+                        disconnectTimers.set(info.playerId, timer);
+                    }
                 }
             }
         }
