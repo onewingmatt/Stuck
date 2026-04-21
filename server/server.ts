@@ -146,9 +146,11 @@ wss.on('connection', (ws) => {
         if (state && state.status === 'waiting' && state.players.length < 8) {
             const archetype = (payload?.archetype || 'Average') as BotArchetype;
             const botConfig = BOT_ARCHETYPES[archetype];
+            const existingCount = state.players.filter(p => p.isBot && p.botConfig?.archetype === archetype).length;
+            const botName = existingCount === 0 ? `${archetype} Bot` : `${archetype} Bot #${existingCount + 1}`;
             state.players.push({
                 id: `bot-${uuidv4()}`,
-                name: `${archetype} Bot`,
+                name: botName,
                 hand: [], wonCards: [], chosenPainCard: null, score: 0, isBot: true, botConfig: { archetype, ...botConfig }, connected: true
             });
             broadcast(roomId);
