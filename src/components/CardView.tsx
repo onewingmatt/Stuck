@@ -34,7 +34,7 @@ export function CardView({ card, onClick, selected, disabled, small, glow }: Car
       onClick={disabled ? undefined : onClick}
       className={`
         relative isolate flex items-center justify-center overflow-visible font-bold text-white transition-all duration-200 ease-out
-        ${small ? 'h-16 w-12 text-lg rounded-sm' : 'h-24 w-16 text-2xl sm:h-32 sm:w-20 sm:text-3xl rounded-2xl'}
+${small ? 'h-16 w-12 text-lg rounded-sm' : 'h-24 w-16 text-2xl sm:h-32 sm:w-20 sm:text-3xl rounded-2xl'}
         bg-gradient-to-br ${bgClass}
         ${selected ? 'z-20 -translate-y-5 scale-[1.04] ring-2 ring-cyan-300/70 shadow-[0_18px_40px_rgba(0,0,0,0.45)]' : glow ? `ring-1 ring-white/25 ${glow}` : 'ring-1 ring-white/20 shadow-[0_10px_24px_rgba(0,0,0,0.3)]'}
         ${disabled ? 'opacity-40 cursor-not-allowed saturate-50' : small ? '' : 'cursor-pointer card-hover-lift'}
