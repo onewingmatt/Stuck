@@ -11,6 +11,49 @@ export const BOT_ARCHETYPES: Record<BotArchetype, Omit<BotConfig, 'archetype'>> 
   Shark:      { skill: 0.9, awareness: 0.9, riskyness: 0.7 },
 };
 
+// ─── Game Context ──────────────────────────────────────────────────────────
+
+interface GameContext {
+  scorePosition: 'ahead' | 'middle' | 'behind';
+  roundsLeft: number;
+  isFinalRound: boolean;
+  highCardsRemaining: number;
+  adjustedRiskyness: (base: number) => number;
+}
+
+function buildGameContext(bot: Player, state: GameState): GameContext {
+  const scores = state.players.map(p => ({ id: p.id, score: state.scores[p.id] ?? 0 }));
+  const myScore = state.scores[bot.id] ?? 0;
+  const sorted = [...scores].sort((a, b) => b.score - a.score);
+  const myRank = sorted.findIndex(s => s.id === bot.id);
+
+  let scorePosition: 'ahead' | 'middle' | 'behind';
+  if (myRank === 0) scorePosition = 'ahead';
+  else if (myRank >= state.players.length - 2) scorePosition = 'behind';
+  else scorePosition = 'middle';
+
+  const totalRounds = state.settings?.roundCount || state.players.length;
+  const roundsLeft = totalRounds - state.roundNumber;
+  const isFinalRound = roundsLeft <= 1;
+
+  // Estimate high cards remaining in play (cards 10+)
+  const totalHighCards = state.players.length * 5; // rough estimate
+  const playedHighCards = state.trickHistory.reduce((sum, t) =>
+    sum + t.played.filter(p => p.card.value >= 10).length, 0);
+  const highCardsRemaining = Math.max(0, totalHighCards - playedHighCards);
+
+  const adjustedRiskyness = (base: number): number => {
+    let adj = base;
+    if (scorePosition === 'behind') adj += 0.25;
+    if (scorePosition === 'ahead') adj -= 0.2;
+    if (isFinalRound && scorePosition === 'behind') adj += 0.3;
+    if (isFinalRound && scorePosition === 'ahead') adj -= 0.25;
+    return Math.max(0, Math.min(1, adj));
+  };
+
+  return { scorePosition, roundsLeft, isFinalRound, highCardsRemaining, adjustedRiskyness };
+}
+
 // ─── Entry Point ────────────────────────────────────────────────────────────
 
 export function doBotAction(state: GameState): { action: 'select_pain' | 'play_card' | 'clear_trick', playerId?: string, cardId?: string } | null {
@@ -119,14 +162,17 @@ function chooseTrickCard(bot: Player, state: GameState): Card {
     }
   }
 
-  if (state.currentTrick.length === 0) return leadCard(bot, state, knownPainColors);
-  return followCard(bot, state, knownPainColors);
+  const ctx = buildGameContext(bot, state);
+
+  if (state.currentTrick.length === 0) return leadCard(bot, state, ctx, knownPainColors);
+  return followCard(bot, state, ctx, knownPainColors);
 }
 
 // ─── Leading: archetype-specific strategies ─────────────────────────────────
 
-function leadCard(bot: Player, _state: GameState, knownPainColors?: Record<string, CardColor>): Card {
-  const arch = bot.botConfig!.archetype!;
+function leadCard(bot: Player, state: GameState, ctx: GameContext, knownPainColors?: Record<string, CardColor>): Card {
+  const cfg = bot.botConfig!;
+  const arch = cfg.archetype!;
   const hand = [...bot.hand];
   const painColor = bot.chosenPainCard?.color;
   const lateGame = hand.length <= 5;
@@ -153,76 +199,91 @@ function leadCard(bot: Player, _state: GameState, knownPainColors?: Record<strin
       if (knownPainColors && Math.random() < 0.15 && oppPainCards.length > 0) {
         return oppPainCards[Math.floor(Math.random() * oppPainCards.length)];
       }
+      // Behind novices play slightly smarter
+      if (ctx.scorePosition === 'behind' && zeros.length > 0 && Math.random() < 0.25) return zeros[0];
       if (lateGame && Math.random() < 0.3 && zeros.length > 0) return zeros[0];
       if (Math.random() < 0.2 && zeros.length > 0) return zeros[0];
       return hand[Math.floor(Math.random() * hand.length)];
 
-    case 'Gambler':
+    case 'Gambler': {
       // Leads high to chase tricks, occasionally bleeds pain
+      const risk = ctx.adjustedRiskyness(cfg.riskyness);
       if (lateGame) {
-        // More conservative late game: prefer zeros, then mid-range
-        if (Math.random() < 0.4 && zeros.length > 0) return zeros[0];
+        if (Math.random() < 0.5 && zeros.length > 0) return zeros[0];
         if (Math.random() < 0.3 && safeLow.length > 0) return safeLow[0];
       }
       if (knownPainColors && Math.random() < 0.25 && oppPainCards.length > 0) {
         return oppPainCards[0];
       }
+      // Behind gamblers go even bigger
+      if (risk > 0.7 && highOff.length > 0) return highOff[0];
       if (Math.random() < 0.6 && highOff.length > 0) return highOff[0];
       if (zeros.length > 0) return zeros[Math.floor(Math.random() * zeros.length)];
       return hand[Math.floor(Math.random() * hand.length)];
+    }
 
-    case 'Calculator':
+    case 'Calculator': {
       // Defensive: always lead zeros or lowest safe card
       // Open pain: prefer targeting opponent pain colors
+      const risk = ctx.adjustedRiskyness(cfg.riskyness);
       if (lateGame) {
-        // Very defensive: lead zeros or lowest possible
+        // Behind calculators break their turtle shell
+        if (ctx.scorePosition === 'behind' && lowPain.length > 0 && Math.random() < 0.4) {
+          return lowPain[0];
+        }
         if (zeros.length > 0) return zeros[zeros.length - 1];
         if (safeLow.length > 0) return safeLow[0];
         return hand.reduce((a, b) => a.value < b.value ? a : b);
       }
       if (knownPainColors && strongestOppPain && Math.random() < 0.6) {
-        // Lead opponent pain color to force penalties
         const lowOppPain = oppPainCards.filter(c => c.value <= 6);
         if (lowOppPain.length > 0) return lowOppPain[0];
       }
+      // Behind calculators take more risks with pain bleeds
+      if (risk > 0.3 && lowPain.length > 0 && Math.random() < 0.5) return lowPain[0];
       if (zeros.length > 0) return zeros[zeros.length - 1]; // highest zero
       if (lowPain.length > 0) return lowPain[0]; // lowest pain to bleed
       return safeLow.length > 0 ? safeLow[0] : hand.reduce((a, b) => a.value < b.value ? a : b);
+    }
 
-    case 'Empath':
+    case 'Empath': {
       // Leads mid-pain to test the waters, reads table
       // Open pain: target the player who's ahead in score
       if (knownPainColors && Object.keys(knownPainColors).length > 0) {
-        // Find the opponent with the highest score
-        const opponents = _state.players.filter(p => p.id !== bot.id && knownPainColors[p.id]);
+        const opponents = state.players.filter(p => p.id !== bot.id && knownPainColors[p.id]);
         if (opponents.length > 0) {
-          const ahead = opponents.reduce((a, b) => a.score > b.score ? a : b);
+          const ahead = opponents.reduce((a, b) => (state.scores[a.id] ?? 0) > (state.scores[b.id] ?? 0) ? a : b);
           const targetColor = knownPainColors[ahead.id];
           const targetCards = hand.filter(c => c.color === targetColor).sort((a, b) => a.value - b.value);
-          if (targetCards.length > 0 && Math.random() < 0.5) return targetCards[0];
+          if (targetCards.length > 0 && Math.random() < 0.6) return targetCards[0];
         }
       }
+      // Behind empaths get more aggressive with pain leads
+      if (ctx.scorePosition === 'behind' && midPain.length > 0 && Math.random() < 0.4) return midPain[0];
       if (lateGame && zeros.length > 0) return zeros[0];
       if (midPain.length > 0) return midPain[0];
       if (lowPain.length > 0) return lowPain[Math.floor(Math.random() * lowPain.length)];
       if (zeros.length > 0) return zeros[0];
       return safeLow.length > 0 ? safeLow[0] : hand[0];
+    }
 
-    case 'Bully':
+    case 'Bully': {
       // Always leads their strongest card to dominate
       // Open pain: always lead strongest opponent pain color
       if (knownPainColors && strongestOppPain) {
         return strongestOppPain;
       }
+      // Ahead bullies lead off-suit highs instead of absolute highs to avoid pain traps
+      if (ctx.scorePosition === 'ahead' && highOff.length > 0) return highOff[0];
       if (lateGame) {
-        // Slightly less aggressive: prefer high off-suit over absolute highest
         if (highOff.length > 0) return highOff[0];
       }
       if (highestOff.length > 0) return highestOff[0];
       if (highOff.length > 0) return highOff[0];
       return hand.reduce((a, b) => a.value > b.value ? a : b);
+    }
 
-    case 'Grandmaster':
+    case 'Grandmaster': {
       // Full strategy: bleed pain if available, otherwise zero
       // Open pain: strong preference for opponent pain colors
       if (knownPainColors && strongestOppPain && Math.random() < 0.75) {
@@ -230,21 +291,28 @@ function leadCard(bot: Player, _state: GameState, knownPainColors?: Record<strin
         if (lowOppPain.length > 0) return lowOppPain[0];
       }
       if (lateGame) {
-        // Conservative: zeros first, then safe low
+        // Behind grandmasters take calculated risks
+        if (ctx.scorePosition === 'behind' && midPain.length > 0 && Math.random() < 0.5) {
+          return midPain[0];
+        }
         if (zeros.length > 0) return zeros[Math.floor(Math.random() * zeros.length)];
         if (safeLow.length > 0) return safeLow[0];
       }
+      // Few high cards remaining = tricks worth more, lead pain to bleed
+      if (lowPain.length > 0 && ctx.highCardsRemaining < 3 && Math.random() < 0.8) return lowPain[0];
       if (lowPain.length > 0 && Math.random() < 0.7) return lowPain[0];
       if (zeros.length > 0) return zeros[Math.floor(Math.random() * zeros.length)];
       if (safeLow.length > 0) return safeLow[Math.floor(Math.random() * safeLow.length)];
-      // Last resort: lead lowest pain
       if (midPain.length > 0) return midPain[0];
       return hand.reduce((a, b) => a.value < b.value ? a : b);
+    }
 
-    case 'Shark':
+    case 'Shark': {
       // Opportunistic: reads hand and picks most exploitable lead
       if (lateGame) {
-        // Defensive mode in late game: lead zeros or safe low
+        if (ctx.scorePosition === 'behind' && highOff.length > 0 && Math.random() < 0.4) {
+          return highOff[0]; // behind sharks go aggressive even late
+        }
         if (zeros.length > 0) return zeros[Math.floor(Math.random() * zeros.length)];
         if (safeLow.length > 0) return safeLow[0];
         if (lowPain.length > 0) return lowPain[0];
@@ -254,26 +322,30 @@ function leadCard(bot: Player, _state: GameState, knownPainColors?: Record<strin
         const lowOppPain = oppPainCards.filter(c => c.value <= 5);
         if (lowOppPain.length > 0) return lowOppPain[0];
       }
-      if (highOff.length > 0 && bot.hand.length < 8) return highOff[0]; // late game: go high
+      if (highOff.length > 0 && hand.length < 8) return highOff[0];
       if (zeros.length > 0) return zeros[Math.floor(Math.random() * zeros.length)];
       if (lowPain.length > 0) return lowPain[0];
       return safeLow.length > 0 ? safeLow[0] : hand[0];
+    }
 
-    default: // Average
+    default: { // Average
       // Small probability boost for opponent pain colors
       if (knownPainColors && Math.random() < 0.2 && oppPainCards.length > 0) {
         return oppPainCards[Math.floor(Math.random() * oppPainCards.length)];
       }
+      // Behind averages try harder
+      if (ctx.scorePosition === 'behind' && lowPain.length > 0 && Math.random() < 0.3) return lowPain[0];
       if (lateGame && zeros.length > 0 && Math.random() > 0.2) return zeros[0];
       if (zeros.length > 0 && Math.random() > 0.3) return zeros[Math.floor(Math.random() * zeros.length)];
       if (safeLow.length > 0) return safeLow[0];
       return hand[Math.floor(Math.random() * hand.length)];
+    }
   }
 }
 
 // ─── Following: archetype-specific strategies ───────────────────────────────
 
-function followCard(bot: Player, state: GameState, knownPainColors?: Record<string, CardColor>): Card {
+function followCard(bot: Player, state: GameState, ctx: GameContext, knownPainColors?: Record<string, CardColor>): Card {
   const cfg = bot.botConfig!;
   const arch = cfg.archetype!;
   const trick = state.currentTrick;
@@ -300,16 +372,19 @@ function followCard(bot: Player, state: GameState, knownPainColors?: Record<stri
         ? canDuck.sort((a, b) => a.value - b.value)[0]
         : hand.sort((a, b) => a.value - b.value)[0];
 
-    case 'Gambler':
+    case 'Gambler': {
       // ALWAYS tries to win if possible, even bad tricks
-      // Late game: ~30% more cautious
-      if (lateGame && trickWorth < 0 && canDuck.length > 0 && Math.random() < 0.3) {
+      const risk = ctx.adjustedRiskyness(cfg.riskyness);
+      if (lateGame && trickWorth < 0 && canDuck.length > 0 && Math.random() < risk * 0.4) {
         return canDuck.sort((a, b) => a.value - b.value)[0];
       }
       if (canWin.length > 0) {
-        // Pick highest winning card — goes all in
-        // Late game: use minimum winning card
         if (lateGame) {
+          canWin.sort((a, b) => a.value - b.value);
+          return canWin[0];
+        }
+        // Behind gamblers use minimum winning card even early
+        if (risk > 0.8) {
           canWin.sort((a, b) => a.value - b.value);
           return canWin[0];
         }
@@ -319,13 +394,14 @@ function followCard(bot: Player, state: GameState, knownPainColors?: Record<stri
       // Can't win: throw highest card anyway (spite play)
       hand.sort((a, b) => b.value - a.value);
       return hand[0];
+    }
 
-    case 'Calculator':
+    case 'Calculator': {
       // Never wins a trick with negative value. Ducks with highest pain if forced.
-      // Late game: even more defensive
       {
-        const duckThreshold = lateGame ? 1 : 0;
-        if (trickWorth < duckThreshold || canDuck.length > 0) {
+        const risk = ctx.adjustedRiskyness(cfg.riskyness);
+        const duckThreshold = lateGame ? (ctx.scorePosition === 'behind' ? -1 : 1) : 0;
+        if (trickWorth < duckThreshold || (canDuck.length > 0 && trickWorth <= 0)) {
           const duckCards = canDuck.length > 0 ? canDuck : hand;
           // Calculator: dump highest pain cards to get rid of them
           const painColor = bot.chosenPainCard?.color;
@@ -334,10 +410,16 @@ function followCard(bot: Player, state: GameState, knownPainColors?: Record<stri
           duckCards.sort((a, b) => a.value - b.value);
           return duckCards[0];
         }
+        // Behind calculators win even marginal tricks
+        if (ctx.scorePosition === 'behind' && canWin.length > 0 && trickWorth >= -1) {
+          canWin.sort((a, b) => a.value - b.value);
+          return canWin[0];
+        }
         // Win with absolute minimum
         canWin.sort((a, b) => a.value - b.value);
         return canWin[0];
       }
+    }
 
     case 'Empath':
       // Reads the full trick — considers what EVERY card means
@@ -365,14 +447,13 @@ function followCard(bot: Player, state: GameState, knownPainColors?: Record<stri
         return duckCards2[0];
       }
 
-    case 'Bully':
+    case 'Bully': {
       // Wins EVERY trick they can. If they can't win, they throw trash.
-      // Late game: ~30% more cautious
-      if (lateGame && trickWorth < 0 && canDuck.length > 0 && Math.random() < 0.3) {
+      const risk = ctx.adjustedRiskyness(cfg.riskyness);
+      if (lateGame && trickWorth < 0 && canDuck.length > 0 && Math.random() < risk * 0.4) {
         return canDuck.sort((a, b) => a.value - b.value)[0];
       }
       if (canWin.length > 0) {
-        // Bully plays HIGHEST winning card to show dominance
         if (lateGame) {
           canWin.sort((a, b) => a.value - b.value);
           return canWin[0];
@@ -383,18 +464,17 @@ function followCard(bot: Player, state: GameState, knownPainColors?: Record<stri
       // Can't win: waste lowest card
       hand.sort((a, b) => a.value - b.value);
       return hand[0];
+    }
 
-    case 'Grandmaster':
+    case 'Grandmaster': {
       // Full evaluation: win if positive+can, duck if negative
-      // Late game: even more defensive
       {
-        const negThreshold = lateGame ? 0 : -1;
+        const negThreshold = lateGame ? (ctx.scorePosition === 'behind' ? -2 : 0) : -1;
         if (trickWorth < negThreshold) {
           if (canDuck.length > 0) {
             canDuck.sort((a, b) => a.value - b.value);
             const zeros = canDuck.filter(c => c.value === 0);
             if (zeros.length > 0) return zeros[0];
-            // Dump highest pain while ducking
             const painColor2 = bot.chosenPainCard?.color;
             const painDump = canDuck.filter(c => c.color === painColor2).sort((a, b) => b.value - a.value);
             if (painDump.length > 0) return painDump[0];
@@ -416,8 +496,12 @@ function followCard(bot: Player, state: GameState, knownPainColors?: Record<stri
 
         // Neutral: depends on game state
         if (canWin.length > 0) {
+          // Behind grandmasters win neutral tricks
+          if (ctx.scorePosition === 'behind') {
+            canWin.sort((a, b) => a.value - b.value);
+            return canWin[0];
+          }
           if (lateGame) {
-            // In late game, duck neutral tricks more often
             if (canDuck.length > 0) {
               canDuck.sort((a, b) => a.value - b.value);
               return canDuck[0];
@@ -430,11 +514,16 @@ function followCard(bot: Player, state: GameState, knownPainColors?: Record<stri
         defDuck.sort((a, b) => a.value - b.value);
         return defDuck[0];
       }
+    }
 
-    case 'Shark':
+    case 'Shark': {
       // Opportunistic: wins positive tricks, ducks negative, goes big when it counts
-      // Late game: switch to defensive mode
       if (lateGame) {
+        // Behind sharks take more chances
+        if (ctx.scorePosition === 'behind' && trickWorth >= 0 && canWin.length > 0) {
+          canWin.sort((a, b) => a.value - b.value);
+          return canWin[0];
+        }
         if (trickWorth < 0 && canDuck.length > 0) {
           canDuck.sort((a, b) => a.value - b.value);
           return canDuck[0];
@@ -443,13 +532,11 @@ function followCard(bot: Player, state: GameState, knownPainColors?: Record<stri
           canWin.sort((a, b) => a.value - b.value);
           return canWin[0];
         }
-        // Neutral: duck
         const lateDuck = canDuck.length > 0 ? canDuck : hand;
         lateDuck.sort((a, b) => a.value - b.value);
         return lateDuck[0];
       }
       if (trickWorth > 3 && canWin.length > 0) {
-        // High-value trick: go for it with minimum card
         canWin.sort((a, b) => a.value - b.value);
         return canWin[0];
       }
@@ -458,17 +545,16 @@ function followCard(bot: Player, state: GameState, knownPainColors?: Record<stri
         return canDuck[0];
       }
       if (trickWorth >= -2 && trickWorth <= 3 && canWin.length > 0) {
-        // Marginal: go for it if we're behind in hand count
         if (bot.hand.length > 6) {
           canWin.sort((a, b) => a.value - b.value);
           return canWin[0];
         }
         return canDuck.length > 0 ? canDuck.sort((a, b) => a.value - b.value)[0] : hand.sort((a, b) => a.value - b.value)[0];
       }
-      // Default duck
       const sharkDuck = canDuck.length > 0 ? canDuck : hand;
       sharkDuck.sort((a, b) => a.value - b.value);
       return sharkDuck[0];
+    }
 
     default: // Average
       // Late game: duck negative more aggressively
@@ -504,10 +590,27 @@ function evaluateTrickWorth(bot: Player, trick: { playerId: string; card: Card }
   const painColor = bot.chosenPainCard?.color;
   if (!painColor) return 0;
   let cost = 0;
+
+  // Count pain cards and their values in the trick
+  let painCardsInTrick = 0;
+  let totalPainValue = 0;
+  let nonPainCards = 0;
+
   for (const tc of trick) {
-    if (tc.card.color === painColor) cost -= tc.card.value;
-    else cost += 1;
+    if (tc.card.color === painColor) {
+      cost -= tc.card.value;
+      painCardsInTrick++;
+      totalPainValue += tc.card.value;
+    } else {
+      cost += 1;
+      nonPainCards++;
+    }
   }
+
+  // If trick has multiple pain cards and few non-pain, it's very valuable to win
+  if (painCardsInTrick >= 2 && nonPainCards <= 1) cost += painCardsInTrick * 2;
+  // If trick has zero-value pain cards, winning barely matters for pain
+  if (painCardsInTrick > 0 && totalPainValue === 0) cost -= 2;
 
   // Open pain: factor in whether winning would force opponents to take their pain cards
   if (knownPainColors && Object.keys(knownPainColors).length > 0) {

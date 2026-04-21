@@ -3,6 +3,50 @@ import { type GameState, type CardColor } from '../game/models.js';
 import { CardView } from './CardView';
 import { soundManager } from '../game/soundManager';
 
+interface PlayerStatEntry {
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  totalScore: number;
+  bestRoundScore: number;
+}
+
+function loadStats(): Record<string, PlayerStatEntry> {
+  try {
+    return JSON.parse(localStorage.getItem('stickem_stats') || '{}');
+  } catch { return {}; }
+}
+
+function saveStats(stats: Record<string, PlayerStatEntry>) {
+  localStorage.setItem('stickem_stats', JSON.stringify(stats));
+}
+
+function recordGameEnd(players: { id: string; name: string; score: number }[], myId: string, roundBreakdown: Record<string, any>) {
+  const stats = loadStats();
+  const sorted = [...players].sort((a, b) => b.score - a.score);
+  const winnerId = sorted[0]?.id;
+
+  if (!stats[myId]) {
+    stats[myId] = { gamesPlayed: 0, wins: 0, losses: 0, totalScore: 0, bestRoundScore: 0 };
+  }
+
+  const me = players.find(p => p.id === myId);
+  if (me) {
+    stats[myId].gamesPlayed++;
+    stats[myId].totalScore += me.score;
+    if (myId === winnerId) stats[myId].wins++;
+    else stats[myId].losses++;
+
+    // Find best round score from breakdown
+    const myBreakdown = roundBreakdown[myId];
+    if (myBreakdown && myBreakdown.roundScore > stats[myId].bestRoundScore) {
+      stats[myId].bestRoundScore = myBreakdown.roundScore;
+    }
+  }
+
+  saveStats(stats);
+}
+
 interface GameBoardProps {
   state: GameState;
   playerId: string;
@@ -111,6 +155,17 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
     }
   }, [state.status]);
 
+  // Record persistent stats when game ends
+  useEffect(() => {
+    if (state.status === 'game_over' && me) {
+      recordGameEnd(
+        state.players.map(p => ({ id: p.id, name: p.name, score: state.scores[p.id] })),
+        playerId,
+        state.roundBreakdown
+      );
+    }
+  }, [state.status]);
+
   // Auto-advance next round for the host
   useEffect(() => {
     if (reconnecting) return;
@@ -184,25 +239,25 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
         {others.map((p) => {
             const isThinking = state.currentPlayerIndex === state.players.findIndex(x => x.id === p.id) && state.status === 'playing_trick';
             return (
-                <div key={p.id} className={`flex flex-col items-center rounded-2xl border px-4 py-3 text-sm shadow-lg transition-all duration-300 ${
+                <div key={p.id} className={`flex flex-col items-center rounded-xl sm:rounded-2xl border px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm shadow-lg transition-all duration-300 shrink-0 snap-start ${
                     isThinking
                         ? 'border-yellow-300/40 bg-yellow-500/20 ring-2 ring-yellow-400/40 scale-105'
                         : 'border-white/10 bg-white/5 hover:bg-white/10'
                 }`}>
-                    <div className="flex items-center gap-2">
-                        <span className="font-semibold">{p.name}</span>
-                        {state.status !== 'selecting_pain' && getPainDot(p.chosenPainCard?.color, 'w-3 h-3')}
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                        <span className="font-semibold truncate max-w-[4.5rem] sm:max-w-none">{p.name}</span>
+                        {state.status !== 'selecting_pain' && getPainDot(p.chosenPainCard?.color, 'w-2.5 h-2.5 sm:w-3 sm:h-3')}
                     </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-slate-400/90">
-                        <span>Score: <span className="text-white font-mono">{state.scores[p.id]}</span></span>
-                        <span>Cards: <span className="text-white font-mono">{p.hand.length}</span></span>
+                        <div className="flex items-center gap-2 sm:gap-3 mt-1 text-[10px] sm:text-xs text-slate-400/90">
+                        <span><span className="text-white font-mono">{state.scores[p.id]}</span>pts</span>
+                        <span><span className="text-white font-mono">{p.hand.length}</span>c</span>
                         {p.wonCards.length > 0 && (
                             <button
-                              className="relative flex items-center justify-center rounded-lg border border-white/15 bg-white/10 px-2 py-1 text-xs font-medium text-slate-300 transition-colors hover:bg-white/15 active:scale-[0.98]"
+                              className="relative flex items-center justify-center rounded-md sm:rounded-lg border border-white/15 bg-white/10 px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium text-slate-300 transition-colors hover:bg-white/15 active:scale-[0.98]"
                               onClick={() => setShowWonPiles(showWonPiles === p.id ? null : p.id)}
                               title={`${p.wonCards.length} won cards`}
                             >
-                              {p.wonCards.length} cards
+                              {p.wonCards.length}
                             </button>
                         )}
                     </div>
@@ -250,7 +305,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
     return (
       <div className="flex min-h-[200px] flex-col items-center justify-center my-4">
         {state.leadColor && (
-            <div className="mb-3 px-3 py-1 rounded-full bg-white/10 text-sm font-medium backdrop-blur-sm">
+            <div className="mb-2 sm:mb-3 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-white/10 text-[11px] sm:text-sm font-medium backdrop-blur-sm">
               Lead: {state.leadColor}
             </div>
         )}
@@ -260,6 +315,7 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
                 const pIdx = state.players.findIndex(p => p.id === tc.playerId);
                 const isWinner = state.trickWinnerIndex === pIdx;
                 const animState = animCards[tc.playerId];
+                const manyPlayers = state.players.length >= 5;
 
                 return (
                     <div key={tc.playerId} className={`flex flex-col items-center ${
@@ -268,11 +324,11 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
                         <span className="text-[10px] sm:text-xs mb-1.5 sm:mb-2 truncate w-14 sm:w-20 text-center text-gray-300">{pName}</span>
                         <div className={animState?.anim === 'deal-in' ? 'anim-deal-in' : animState?.anim === 'collect' ? 'anim-collect' : ''}
                              style={animState?.anim === 'collect' ? { transitionDelay: `${pIdx * 0.08}s` } : undefined}>
-                          <CardView card={tc.card} disabled />
+                          <CardView card={tc.card} disabled small={manyPlayers && isMobile} />
                         </div>
-                        {isWinner && !justResolved && <div className="mt-2 text-xs text-green-400 font-bold anim-fade-in-up">Winner</div>}
+                        {isWinner && !justResolved && <div className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-green-400 font-bold anim-fade-in-up">Winner</div>}
                     </div>
-                )
+                );
             })}
         </div>
         {state.currentTrick.length === state.players.length && (
@@ -316,6 +372,26 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
                   <span>Rounds: <span className="font-semibold text-white">{state.roundNumber}</span></span>
                 </div>
               </div>
+            )}
+            {state.status === 'game_over' && (
+              (() => {
+                const stats = loadStats();
+                const my = stats[playerId];
+                if (!my || my.gamesPlayed === 0) return null;
+                return (
+                  <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-center">
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2">Your Stats</div>
+                    <div className="flex justify-center gap-4 text-sm">
+                      <div><span className="font-bold text-white">{my.gamesPlayed}</span> <span className="text-slate-400">played</span></div>
+                      <div><span className="font-bold text-emerald-400">{my.wins}</span> <span className="text-slate-400">wins</span></div>
+                      <div><span className="font-bold text-rose-400">{my.losses}</span> <span className="text-slate-400">losses</span></div>
+                    </div>
+                    {my.bestRoundScore > 0 && (
+                      <div className="mt-1 text-xs text-slate-500">Best round: <span className="text-amber-400 font-medium">{my.bestRoundScore}</span></div>
+                    )}
+                  </div>
+                );
+              })()
             )}
             {state.status === 'game_over' && (
               <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -560,13 +636,13 @@ export function GameBoard({ state, playerId, sendAction, leaveRoom, reconnecting
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   <span className="font-bold text-sm sm:text-base tracking-wide">{me.name} (You)</span>
                   {myPainColor && (
-                        <div className="flex items-center gap-1 text-xs text-slate-400">
-                      {getPainDot(myPainColor, 'w-3 h-3')}
-                      <span>Pain: {myPainColor}</span>
+                        <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-400">
+                      {getPainDot(myPainColor, 'w-2.5 h-2.5 sm:w-3 sm:h-3')}
+                      <span>{myPainColor}</span>
                     </div>
                   )}
                 </div>
-                <div className="text-sm text-slate-400">Score: {state.scores[me.id]}</div>
+                <div className="text-xs sm:text-sm text-slate-400">{state.scores[me.id]} pts</div>
             </div>
         </div>
         {renderHand()}
