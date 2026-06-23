@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { type GameState } from '../game/models.js';
 import { BOT_ARCHETYPES } from '../game/ai.js';
 import { soundManager } from '../game/soundManager';
@@ -34,6 +34,7 @@ export function Lobby({ state, playerId, roomId, playerName, reconnecting = fals
   const [turnTimer, setTurnTimer] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
   const [volume, setVolume] = useState(soundManager.getVolume());
+  const roomCodeRef = useRef<HTMLInputElement>(null);
   const [chatInput, setChatInput] = useState('');
   if (!roomId || !state) {
     return (
@@ -132,7 +133,7 @@ export function Lobby({ state, playerId, roomId, playerName, reconnecting = fals
                       className="h-4 w-4 accent-cyan-500"
                     />
                   </label>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-900/60 px-3 py-3">
                     <span className="text-xs uppercase tracking-wider text-slate-400">Vol</span>
                     <input
                       type="range"
@@ -145,7 +146,7 @@ export function Lobby({ state, playerId, roomId, playerName, reconnecting = fals
                         setVolume(val);
                         soundManager.setVolume(val);
                       }}
-                      className="h-1 flex-grow cursor-pointer appearance-none rounded-lg bg-white/15 accent-cyan-500"
+                      className="h-1.5 flex-grow cursor-pointer appearance-none rounded-lg bg-white/15 accent-cyan-500"
                     />
                     <span className="w-10 text-right font-mono text-xs text-slate-400">{Math.round(volume * 100)}%</span>
                   </div>
@@ -168,16 +169,31 @@ export function Lobby({ state, playerId, roomId, playerName, reconnecting = fals
                 </div>
                 <div className="flex gap-2">
                   <input
+                    ref={roomCodeRef}
+                    autoFocus
                     type="text"
                     placeholder="Room Code"
+                    maxLength={10}
                     className="flex-grow rounded-xl border border-white/10 bg-slate-900/80 px-3 py-3 uppercase text-white outline-none transition-colors placeholder:text-slate-500 focus:border-cyan-400/50"
-                    value={joinId}
-                    onChange={(e) => setJoinId(e.target.value.toUpperCase())}
-                  />
-                  <button
-                    onClick={() => { soundManager.play('click'); joinRoom(joinId); }}
-                    disabled={reconnecting}
-                    className={`rounded-xl border px-4 py-3 font-semibold transition-all active:scale-[0.98] ${reconnecting ? 'cursor-not-allowed border-white/5 bg-white/5 text-slate-500' : 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white'}`}
+                     value={joinId}
+                     onChange={(e) => setJoinId(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && joinId.trim()) {
+                        soundManager.play('click');
+                        joinRoom(joinId.trim());
+                      }
+                    }}
+                   />
+                   <button
+                    onClick={() => { soundManager.play('click'); joinRoom(joinId.trim()); }}
+                    disabled={reconnecting || !joinId.trim()}
+                    className={`rounded-xl border px-4 py-3 font-semibold transition-all active:scale-[0.98] ${
+                      reconnecting
+                        ? 'cursor-not-allowed border-white/5 bg-white/5 text-slate-500'
+                        : !joinId.trim()
+                          ? 'cursor-not-allowed border-white/10 bg-white/5 text-slate-500'
+                          : 'border-white/10 bg-cyan-500 text-slate-950 hover:bg-cyan-400'
+                    }`}
                   >
                     Join
                   </button>
