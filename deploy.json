@@ -2,7 +2,6 @@
   "host": "onewing@10.0.0.145",
   "container": "stuck",
   "files": [
-    "package.json",
     "package-lock.json"
   ],
   "url": "https://stuck.onewing.top/",
@@ -10,5 +9,6 @@
     "localDir": "dist-server",
     "containerDir": "/app/dist-server",
     "trackedPrefix": "src"
-  }
+  },
+  "_note": "package.json is deliberately NOT compared: it carries scripts and metadata with no runtime effect, so every script-only commit made the deploy read as stale while proving nothing. The lock is kept because npm ci's whole point is that the builder cannot rewrite it, and the artifact check below proves the CODE is this revision's build (dist-server is emitted by tsc and reproduces byte-for-byte across the local and container builds)."
 }
