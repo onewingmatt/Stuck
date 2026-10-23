@@ -1,6 +1,14 @@
 {
   "host": "onewing@10.0.0.145",
   "container": "stuck",
-  "files": ["package.json", "package-lock.json"],
-  "url": "https://stuck.onewing.top/"
+  "files": [
+    "package.json",
+    "package-lock.json"
+  ],
+  "url": "https://stuck.onewing.top/",
+  "artifact": {
+    "localDir": "dist-server",
+    "containerDir": "/app/dist-server",
+    "trackedPrefix": "src"
+  }
 }

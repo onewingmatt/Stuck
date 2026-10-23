@@ -14,7 +14,7 @@
     "lint": "eslint .",
     "audit": "tsx scripts/independent-rules-check.ts",
     "preview": "vite preview",
-    "deploy:verify": "node scripts/deploy-verify.mjs",
+    "deploy:verify": "node scripts/deploy-verify.mjs && node scripts/deploy-verify-static.mjs",
     "gate": "node scripts/gate.mjs",
     "gate:strict": "node scripts/gate.mjs --strict"
   },
