@@ -15,8 +15,11 @@ COPY index.html ./
 COPY vite.config.ts ./
 COPY eslint.config.js ./
 
-# Install dependencies and build
-RUN npm install
+# Install dependencies and build. `npm ci` (not `npm install`): install is allowed to REWRITE
+# package-lock.json inside the builder, and the production stage then ships that rewrite — so the
+# image carried a lockfile that is in no repo (verified 2026-10-23: repo bb1e911c, image 8c5d00d3).
+# ci resolves exactly the committed lock and FAILS LOUDLY on a mismatch instead of papering over it.
+RUN npm ci
 RUN npm run build
 
 # Production stage
@@ -29,8 +32,8 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/dist-server ./dist-server
 COPY --from=builder /app/package*.json ./
 
-# Install production dependencies only
-RUN npm install --omit=dev
+# Install production dependencies only (ci, same reason as above)
+RUN npm ci --omit=dev
 
 # Set environment
 ENV NODE_ENV=production
