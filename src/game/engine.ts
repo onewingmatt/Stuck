@@ -206,11 +206,10 @@ export function resolveTrick(state: GameState): GameState {
         }
         
         winnerId = winningPlay.playerId;
-        const winnerIndex = newState.players.findIndex((p: Player) => p.id === winnerId);
-        
-        newState.players[winnerIndex].wonCards.push(...trick.map((tc: PlayedCard) => tc.card));
-        newState.trickWinnerIndex = winnerIndex;
     }
+    const winnerIndex = newState.players.findIndex((p: Player) => p.id === winnerId);
+    newState.players[winnerIndex].wonCards.push(...trick.map((tc: PlayedCard) => tc.card));
+    newState.trickWinnerIndex = winnerIndex;
 
     const winnerIndexFinal = newState.players.findIndex((p: Player) => p.id === winnerId);
     newState.currentPlayerIndex = winnerIndexFinal;
