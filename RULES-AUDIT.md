@@ -1,9 +1,9 @@
 # Stuck — RULES-AUDIT
 
-Status: **AUDITED — engine rules are faithful to real Sticheln/Stick 'Em in the core, with 2 rule divergences
-(1 fixed this pass: all-zeros trick-winner index; 7p/8p deck tables documented + 1 house rule) and 4 done-gate gaps.**
+Status: **AUDITED — engine rules are faithful to real Sticheln/Stick 'Em. The last open rule divergence (7p/8p
+deck tables, D1) is now FIXED; what remains are 1 house-rule setting (D2 rounds) and 4 done-gate gaps.**
 Run: `npm run typecheck` (client build `tsc -b`) green · `npx tsc -p tsconfig.server.json --noEmit` green ·
-`npm run audit` → **2 FAILURES remain (D1 7p/8p deck tables — documented, not trivially safe)** · 
+`npm run audit` → **0 FAIL, 1 documented divergence (D2, a house setting)** ·
 `npm run lint` RED (22 pre-existing problems, unchanged by this audit) ·
 `npm test` — **no test script exists** (no test suite at all).
 Source of truth: `references/rulebook-extract.md` (Capstone Stick 'Em rulebook transcription + 5 independent
@@ -30,7 +30,7 @@ is a wrong attribution (see §1). Rules implemented = Sticheln/Stick 'Em classic
 
 | # | Rulebook (Stick 'Em / Sticheln) | Port behavior | Severity |
 |---|---|---|---|
-| D1 | **Deck by player count:** 3p 0–8/5 colors, 4p 0–11/5, 5p 0–14/5, 6p 0–14/6, 7p 0–17/6, 8p 0–18/6 (verified: real decks 45/60/75/90/108/120 cards) | Engine: 3p 0–8/5 ✔; 4p 0–11/5 ✔; 5p 0–14/5 ✔; 6p 0–14/6 ✔; **7p 0–14/7 colors (105 cards)** ✗; **8p 0–14/8 colors (120 cards)** ✗ (real: 0–18/6) | MED — 7p/8p off; 3–6p core faithful |
+| D1 | **Deck by player count:** 3p 0–8/5 colors, 4p 0–11/5, 5p 0–14/5, 6p 0–14/6, 7p 0–17/6, 8p 0–18/6 (real decks 45/60/75/90/108/**114** cards) | **FIXED** — `createDeck` now reads one table (`DECK_BY_PLAYERS`) and 7p/8p deal 6 colors to 0–17 and 0–18: 108 and 114 cards. Was 7p 0–14/7 colors (105) and 8p 0–14/8 colors (120) | ✔ FIXED |
 | D2 | **Rounds:** five rounds (rulebook); editions vary (Boards and Bees: "as many rounds as players") | Default = playerCount rounds ("auto"), options 3/5/8. House rule — documented, not broken | LOW (house setting) |
 | D3 | **"Open Pain Cards" option** — NOT a rulebook variant | Disables pain-color penalty on won cards (only declared card penalizes). Local house option | LOW (extra option) |
 | D4 | **Trick-winner leads next trick**; round = 14 tricks (13 at 8p) | Engine resolves the trick, then **auto-clears** (client sends `clear_trick` 3 s after resolution); same player leads — equivalent in effect | OK (UI pacing) |
@@ -38,8 +38,11 @@ is a wrong attribution (see §1). Rules implemented = Sticheln/Stick 'Em classic
 | D6 | Zero rules: 0 never trump, never wins; all-zero trick → leader wins | ✔ (leadColor only set by non-zero; all-zero → first player) | ✔ |
 
 Trivially-safe fixes applied: **none were needed for 3–6p core** (deck table + tie-break + zeros + scoring all
-faithful). D1's 7p/8p deck tables were left as-is (engine supports those counts; changing the deck schema is not
-trivially safe without UI/validation ripple — documented for the follow-up). D2/D3 are intended house options.
+faithful). **D1 is now fixed** (2026-10-25): `createDeck` reads a single `DECK_BY_PLAYERS` table and 7p/8p deal
+the rulebook deck — 108 cards at 0–17/6 colours and 114 at 0–18/6 — with the leftover matching the rulebook's own
+note (3 cards at 7p, 2 at 8p). The old tables (105/7 colours and 120/8 colours) also gave every player the right
+hand SIZE, which is why nothing caught it; the audit's own 8p expectation was wrong too (it asked for 120 cards in
+6 colours, but 6 × 0–18 is 114) and was corrected alongside. D2/D3 are intended house options.
 
 ## 3. ENGINE/CONTRACT BUGS (pre-existing; documented, NOT fixed)
 
@@ -62,8 +65,8 @@ selectPainCard, playCard, resolveTrick, endRound) with hand-built states — no 
 | A2 | 4p deck: 0–11, 5 colors, 60 cards, 15 each | 60 cards, 5 colors, min 0 max 11, 15 each | ✅ PASS |
 | A3 | 5p deck: 0–14, 5 colors, 75 cards, 15 each | 75 cards, 5 colors, min 0 max 14, 15 each | ✅ PASS |
 | A4 | 6p deck: 0–14, 6 colors, 90 cards, 15 each | 90 cards, 6 colors, min 0 max 14, 15 each | ✅ PASS |
-| A5 | 7p deck: 0–17, 6 colors, 108 cards, 15 each (+3 aside) | 105 cards, 7 colors, max 14 — **DIVERGES** (D1) | ⚠️ DOC |
-| A6 | 8p deck: 0–18, 6 colors, 120 cards, 14 each (+2 aside) | 120 cards, 8 colors, max 14 — **DIVERGES** (D1) | ⚠️ DOC |
+| A5 | 7p deck: 0–17, 6 colors, 108 cards, 15 each (+3 aside) | 108 cards, 6 colors, min 0 max 17, 15 each (+3 aside) | ✅ PASS (D1 fixed) |
+| A6 | 8p deck: 0–18, 6 colors, **114** cards, 14 each (+2 aside) | 114 cards, 6 colors, min 0 max 18, 14 each (+2 aside) | ✅ PASS (D1 fixed) |
 | A7 | Worked example 1: lead 6, 5, 2, 11 → 11 wins | resolveTrick: highest lead-color 11 wins | ✅ PASS |
 | A8 | Worked example 2: 3, 2, 0, 4 → 4 wins (0 not trump) | 0 filtered from trumps; highest lead 4 wins | ✅ PASS |
 | A9 | Worked example 3: 10, 0, 7(trump), 11 → 7 wins | trump 7 beats lead 11 | ✅ PASS |
@@ -101,9 +104,26 @@ missing pan/zoom ✗, how-to-play ✗, cache-bust ✗; partial CVD-safe, partial
 
 - **Added** `SCOPE.md`, `references/rulebook-extract.md`, `RULES-AUDIT.md`, `scripts/independent-rules-check.ts`.
 - **Added** `npm run audit` (runs the independent rules check; exit 0 = green).
-- **No engine behavior changed** — the 3–6p core rules were already faithful; E1–E4 and D1 are documented for a
-  follow-up (E2's phantom round and E1's inert timer are the two that matter most).
+- **One engine behavior changed**: `createDeck`'s 7p/8p tables (D1). The 3–6p core rules were already faithful;
+  E1–E4 remain documented for a follow-up (E2's phantom round and E1's inert timer are the two that matter most).
 - **Nothing outside `/home/onewing/Stuck` was modified.**
+
+## 6b. D1 fix, 2026-10-25
+
+`createDeck` was a chain of `if/else if` branches where 7p and 8p added a 7th/8th COLOUR at max 14 instead of
+extending the value range of the six colours the rulebook names. Replaced with one `DECK_BY_PLAYERS` table —
+`{ 3: 5/8, 4: 5/11, 5: 5/14, 6: 6/14, 7: 6/17, 8: 6/18 }` (colors/max) — so the deck is a full colours × values
+rectangle for every count.
+
+Why it survived the first audit: both wrong tables still dealt the correct 15 (and 14) cards per player, so every
+downstream invariant held and only the composition was wrong. Two independent statements in the rulebook pin the
+sizes — the setup table (6 colours, 0–17 and 0–18) and the deal note (3 cards left over at 7p, 2 at 8p) — and they
+agree: 6 × 18 = 108 = 15×7 + 3, and 6 × 19 = 114 = 14×8 + 2.
+
+Verified: `npm run audit` turns 4 FAIL → 0 FAIL, exit 1 → exit 0, RED-proved by running the corrected audit against
+the pre-fix engine in a `git worktree` (4 failures, exit 1). `npm run gate` passes. The corrected audit now asserts
+the deck composition AND the deal/leftover counts for all six player counts, in both cases from the rulebook's own
+numbers rather than from the engine.
 
 ## 7. Verification results
 

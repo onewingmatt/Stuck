@@ -55,9 +55,6 @@
     "floor": [
       "audit",
       "deploy:verify"
-    ],
-    "debt": {
-      "audit": "D1: 7p/8p decks give 105/120 cards in 7/8 colors, the real decks are 108/120 in 6 \u2014 documented in RULES-AUDIT.md and deliberately left: changing the deck schema is not trivially safe"
-    }
+    ]
   }
 }

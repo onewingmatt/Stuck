@@ -2,27 +2,30 @@ import { type Card, type CardColor, type GameState, type Player, type PlayedCard
 
 const COLORS: CardColor[] = ['Red', 'Yellow', 'Green', 'Blue', 'Purple', 'Gray', 'Pink', 'Orange'];
 
+// Deck by player count — the rulebook's own table
+// (references/rulebook-extract.md §Game setup). Values run 0..max in EVERY
+// colour in play, so the total is a full rectangle of colours × values; that
+// is what makes the leftover match the rulebook's deal note ("With seven
+// players three cards remain un-dealt, and with eight players two cards
+// remain" — 6×18 = 108 = 15×7 + 3, and 6×19 = 114 = 14×8 + 2).
+const DECK_BY_PLAYERS: Record<number, { colors: number; max: number }> = {
+  3: { colors: 5, max: 8 }, // 45
+  4: { colors: 5, max: 11 }, // 60
+  5: { colors: 5, max: 14 }, // 75
+  6: { colors: 6, max: 14 }, // 90
+  7: { colors: 6, max: 17 }, // 108
+  8: { colors: 6, max: 18 }, // 114
+}
+
 export function createDeck(playerCount: number): Card[] {
   const deck: Card[] = [];
-  let colorsToUse = COLORS.slice(0, 5);
-  let maxValue = 8;
-
-  if (playerCount === 4) maxValue = 11;
-  else if (playerCount >= 5 && playerCount <= 6) {
-    maxValue = 14;
-    if (playerCount === 6) colorsToUse = COLORS.slice(0, 6);
-  }
-  else if (playerCount === 7) {
-    colorsToUse = COLORS.slice(0, 7);
-    maxValue = 14;
-  }
-  else if (playerCount === 8) {
-    colorsToUse = COLORS.slice(0, 8);
-    maxValue = 14;
-  }
+  // 7-8p used to deal a 7th/8th colour at max 14 (105 and 120 cards), which
+  // is not the rulebook deck — see RULES-AUDIT.md D1.
+  const spec = DECK_BY_PLAYERS[playerCount] ?? DECK_BY_PLAYERS[3]
+  const colorsToUse = COLORS.slice(0, spec.colors)
 
   for (const color of colorsToUse) {
-    for (let value = 0; value <= maxValue; value++) {
+    for (let value = 0; value <= spec.max; value++) {
       deck.push({ id: `${color}-${value}`, color, value });
     }
   }

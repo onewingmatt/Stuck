@@ -54,7 +54,21 @@ const deckExpect: Record<number, { cards: number; colors: number; max: number }>
   5: { cards: 75, colors: 5, max: 14 },
   6: { cards: 90, colors: 6, max: 14 },
   7: { cards: 108, colors: 6, max: 17 },
-  8: { cards: 120, colors: 6, max: 18 },
+  8: { cards: 114, colors: 6, max: 18 },
+};
+// The rulebook deals 15 cards each, or 14 at eight players, and states the
+// leftover explicitly: "With seven players three cards remain un-dealt, and
+// with eight players two cards remain. These cards are shown to all players,
+// and set aside." Those two statements are the independent check on the deck
+// sizes above — 6×18 = 108 = 15×7 + 3 and 6×19 = 114 = 14×8 + 2 — which is
+// why the 8p deck is 114 and not a 120-card rectangle.
+const dealExpect: Record<number, { per: number; aside: number }> = {
+  3: { per: 15, aside: 0 },
+  4: { per: 15, aside: 0 },
+  5: { per: 15, aside: 0 },
+  6: { per: 15, aside: 0 },
+  7: { per: 15, aside: 3 },
+  8: { per: 14, aside: 2 },
 };
 for (const n of [3, 4, 5, 6, 7, 8]) {
   const d = createDeck(n);
@@ -63,12 +77,13 @@ for (const n of [3, 4, 5, 6, 7, 8]) {
   const per = Math.floor(d.length / n);
   const rem = d.length % n;
   const exp = deckExpect[n];
-  const core = n <= 6;
-  const label = core ? 'deck' : 'deck (7-8p is a local extension)';
-  if (core) check(`players=${n} ${label}: ${d.length} cards, ${colors} colors, max ${maxV}`, `${d.length}/${colors}/${maxV}`, `${exp.cards}/${exp.colors}/${exp.max}`);
-  else doc(`players=${n} ${label}: ${d.length} cards, ${colors} colors, max ${maxV}`, `${d.length}/${colors}/${maxV}`, `${exp.cards}/${exp.colors}/${exp.max}`, 'divergence D1');
-  const dealt = per * n;
-  check(`players=${n}: 15 per player + even deal (dealt=${dealt}, rem=${rem})`, rem === 0 && (per === 15 || (n === 8 && per === 14)), true);
+  check(`players=${n} deck: ${d.length} cards, ${colors} colors, max ${maxV}`, `${d.length}/${colors}/${maxV}`, `${exp.cards}/${exp.colors}/${exp.max}`);
+  const de = dealExpect[n];
+  check(
+    `players=${n}: ${de.per} per player, ${de.aside} set aside (dealt=${per * n}, rem=${rem})`,
+    `${per}/${rem}`,
+    `${de.per}/${de.aside}`,
+  );
 }
 
 // ─── Rulebook worked examples (references/rulebook-extract.md §Worked examples) ───
